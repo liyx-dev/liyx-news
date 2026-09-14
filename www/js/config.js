@@ -5,8 +5,8 @@
 // ============================================================
 
 // ---- Supabase (see docs/01-SUPABASE-SETUP.md) ----
-export const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
-export const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+export const SUPABASE_URL = "https://pzkchjmvomqtqvqfolpi.supabase.co";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6a2Noam12b21xdHF2cWZvbHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MTk2OTYsImV4cCI6MjEwNDk5NTY5Nn0.DdAG02MActkjEnepE40P4MY5dcy6WOkB7NWeOo8_Zls";
 
 // ---- Feature flags ----
 export const FEATURES = {
