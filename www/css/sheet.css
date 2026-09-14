@@ -1,0 +1,70 @@
+/* ============================================================
+   BOTTOM SHEET + GO-LINK REDIRECT PAGE
+============================================================= */
+.scrim{
+  position:fixed; inset:0;
+  background:rgba(10,10,12,.5);
+  backdrop-filter:blur(2px);
+  opacity:0; pointer-events:none;
+  transition:opacity .25s ease;
+  z-index:60;
+}
+.scrim.open{ opacity:1; pointer-events:auto; }
+
+.sheet{
+  position:fixed; left:0; right:0; bottom:0;
+  max-width:640px; margin:0 auto;
+  background:var(--sheet-bg);
+  border-top:1px solid var(--hair);
+  border-radius:18px 18px 0 0;
+  transform:translateY(100%);
+  transition:transform .32s cubic-bezier(.32,.72,0,1);
+  z-index:61;
+  max-height:88vh;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.sheet.open{ transform:translateY(0); }
+@media(min-width:720px){
+  .sheet{
+    left:50%; right:auto; bottom:50%;
+    transform:translate(-50%,55%) scale(.98);
+    opacity:0; border-radius:16px; width:560px; max-height:82vh;
+    transition:transform .3s ease, opacity .3s ease;
+  }
+  .sheet.open{ transform:translate(-50%,50%) scale(1); opacity:1; }
+}
+
+.sheet-handle{ width:36px; height:4px; background:var(--hair); border-radius:4px; margin:10px auto 4px; flex-shrink:0; }
+@media(min-width:720px){ .sheet-handle{ display:none; } }
+
+.sheet-scroll{ overflow-y:auto; padding:8px 20px 28px; position:relative; }
+.sheet-close{
+  position:absolute; top:14px; right:14px;
+  width:32px; height:32px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--hair); background:var(--sheet-bg); z-index:2;
+}
+.sheet-close:hover{ background:var(--card-hover); }
+
+.sheet-img{ width:100%; height:200px; object-fit:cover; border-radius:12px; margin-bottom:16px; background:var(--bg-2); }
+.sheet-kicker{ font-size:11.5px; font-weight:600; color:var(--signal); margin-bottom:8px; display:flex; gap:8px; }
+.sheet-kicker .dot{ color:var(--sub); font-weight:400; }
+.sheet-title{ font-family:var(--serif); font-size:23px; font-weight:700; line-height:1.24; letter-spacing:-.015em; margin-bottom:12px; }
+.sheet-insight{ font-size:13.5px; line-height:1.55; color:var(--sub); background:var(--bg-2); border-radius:10px; padding:12px; margin-bottom:14px; }
+.sheet-text{ font-size:14.5px; line-height:1.65; color:var(--fg); opacity:.9; margin-bottom:20px; }
+.sheet-actions{ display:flex; gap:10px; align-items:center; border-top:1px solid var(--hair); padding-top:16px; }
+.sheet-link{ flex:1; text-align:center; padding:13px 18px; background:var(--signal); color:#fff; font-size:13px; font-weight:700; border-radius:10px; }
+.sheet-link:hover{ background:var(--signal-dim); }
+.sheet-share{ width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1px solid var(--hair); flex-shrink:0; }
+.sheet-share:hover{ background:var(--card-hover); }
+.sheet-share svg{ width:17px; height:17px; }
+
+/* go-link page: LIYX-branded interstitial that loads BEFORE the
+   original source, satisfying "our URL first" */
+.go-page{ padding:24px 20px 60px; max-width:520px; margin:0 auto; }
+.go-brand{ font-family:var(--serif); font-weight:700; font-size:26px; margin-bottom:20px; }
+.go-brand em{ font-style:normal; color:var(--signal); }
+.go-ad-slot{ margin-bottom:18px; }
+.go-fallback{ font-size:14px; color:var(--sub); line-height:1.6; margin-bottom:20px; }
+.go-cta{ display:inline-block; }
