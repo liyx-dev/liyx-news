@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>LIYX — World News, Live</title>
+<meta name="description" content="LIYX is a live, source-agnostic world news feed. No sign-up, no database — just the feed, scoped to where you are." />
+<meta name="theme-color" content="#FFFFFF" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/feed.css">
+<link rel="stylesheet" href="css/sheet.css">
+<link rel="stylesheet" href="css/ads.css">
+</head>
+<body data-theme="light">
+
+<header class="masthead">
+  <div class="masthead-top">
+    <div class="brand">
+      <span class="brand-mark">LIY<em>X</em></span>
+      <span class="brand-tag">BY LIYOG BARTOOS O.</span>
+    </div>
+    <div class="head-controls">
+      <div class="live-pulse"><span class="pulse-dot"></span><span>LIVE</span></div>
+      <button class="icon-btn" id="refreshBtn" title="Refresh feed" aria-label="Refresh feed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+      </button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="rail" id="rail" aria-label="Categories"></nav>
+  <div class="location-strip" id="locationStrip"></div>
+</header>
+
+<div class="ticker-wrap" id="tickerWrap"><div class="ticker-track" id="tickerTrack"></div></div>
+
+<main class="wrap">
+  <div class="feed" id="feed"></div>
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+    <button class="load-more" id="loadMoreBtn">Show more stories</button>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <p><strong>LIYX</strong> pulls live headlines directly from public news wires. Nothing lives on a server past 24 hours — your reading cache stays on this device.</p>
+  <p>Built by <strong>Liyog Bartoos O.</strong> · Open source · No sign-up, no tracking beyond anonymous counts.</p>
+</footer>
+
+<nav class="tabbar">
+  <button class="tab-btn active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Feed</button>
+  <button class="tab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search</button>
+  <button class="tab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Categories</button>
+  <button class="tab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>You</button>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="sheet" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="sheet-handle"></div>
+  <button class="sheet-close" id="sheetClose" aria-label="Close">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  <div class="sheet-scroll" id="sheetScroll"></div>
+</section>
+
+<!-- Branded "our URL first" page — shown only when the app is
+     opened via a liyx.app/#/go/:id share link -->
+<div id="goOverlay" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:100; overflow-y:auto;"></div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
