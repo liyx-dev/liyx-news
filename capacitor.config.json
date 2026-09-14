@@ -1,0 +1,14 @@
+{
+  "appId": "com.liyog.liyx",
+  "appName": "LIYX",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "AdMob": {
+      "appId": "ca-app-pub-3940256099942544~3347511713"
+    }
+  }
+}
