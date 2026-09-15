@@ -4,8 +4,31 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
 <title>LIYX — World News, Live</title>
-<meta name="description" content="LIYX is a live, source-agnostic world news feed. No sign-up, no database — just the feed, scoped to where you are." />
+<meta name="description" content="LIYX is a live world news feed — global headlines, local stories, and faith & motivation, scoped to where you are." />
 <meta name="theme-color" content="#FFFFFF" />
+
+<!-- ============================================================
+     Open Graph / Twitter Card — used whenever a page (including
+     a shared /go/:id story page) is linked elsewhere, so a
+     preview image + description actually renders on WhatsApp,
+     X, Facebook, iMessage, etc. instead of a bare link.
+     NOTE: these are the site-level defaults. The /go/:id share
+     page itself is a client-side route (no server), so social
+     crawlers that don't execute JS will see these defaults
+     rather than the specific story's image — swapping in true
+     per-story OG tags requires a tiny server-rendered endpoint
+     later; documented in docs/04-OG-IMAGE-NOTE.md.
+============================================================= -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LIYX">
+<meta property="og:title" content="LIYX — World News, Live">
+<meta property="og:description" content="Live global headlines, local stories, and faith & motivation news — no sign-up, always current.">
+<meta property="og:image" content="https://news.liyogworld.com.ng/og-cover.png">
+<meta property="og:url" content="https://news.liyogworld.com.ng/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LIYX — World News, Live">
+<meta name="twitter:description" content="Live global headlines, local stories, and faith & motivation news — no sign-up, always current.">
+<meta name="twitter:image" content="https://news.liyogworld.com.ng/og-cover.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +46,7 @@
   <div class="masthead-top">
     <div class="brand">
       <span class="brand-mark">LIY<em>X</em></span>
-      <span class="brand-tag">BY LIYOG BARTOOS O.</span>
+      <span class="brand-tag">World, live</span>
     </div>
     <div class="head-controls">
       <div class="live-pulse"><span class="pulse-dot"></span><span>LIVE</span></div>
@@ -49,15 +72,24 @@
 </main>
 
 <footer class="site-footer">
-  <p><strong>LIYX</strong> pulls live headlines directly from public news wires. Nothing lives on a server past 24 hours — your reading cache stays on this device.</p>
-  <p>Built by <strong>Liyog Bartoos O.</strong> · Open source · No sign-up, no tracking beyond anonymous counts.</p>
+  <div class="footer-brand">LIY<em>X</em></div>
+  <p>Independent live news, curated the moment it happens.</p>
+  <p class="footer-tag">Built by Liyog Bartoos O.</p>
 </footer>
 
 <nav class="tabbar">
-  <button class="tab-btn active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Feed</button>
-  <button class="tab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search</button>
-  <button class="tab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Categories</button>
-  <button class="tab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>You</button>
+  <button class="tab-btn active" data-tab="feed">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Feed
+  </button>
+  <button class="tab-btn" data-tab="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search
+  </button>
+  <button class="tab-btn" data-tab="categories">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Categories
+  </button>
+  <button class="tab-btn" data-tab="you">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>You
+  </button>
 </nav>
 
 <div class="scrim" id="scrim"></div>
@@ -70,7 +102,7 @@
 </section>
 
 <!-- Branded "our URL first" page — shown only when the app is
-     opened via a liyx.app/#/go/:id share link -->
+     opened via a shared /go/:id link -->
 <div id="goOverlay" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:100; overflow-y:auto;"></div>
 
 <div class="toast" id="toast"></div>
