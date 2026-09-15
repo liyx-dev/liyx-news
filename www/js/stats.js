@@ -152,4 +152,3 @@ export function formatCount(n) {
   if (n < 1000000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
   return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'm';
 }
-
