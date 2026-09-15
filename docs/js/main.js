@@ -18,7 +18,6 @@ import * as Ads from './ads.js';
 // ---- DOM refs ----
 const feedEl = document.getElementById('feed');
 const railEl = document.getElementById('rail');
-const feedTitleEl = document.getElementById('feedTitle');
 const locationStrip = document.getElementById('locationStrip');
 const loadMoreWrap = document.getElementById('loadMoreWrap');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
@@ -152,7 +151,7 @@ function renderRail() {
 async function loadCategory(categoryId, forceRefresh = false) {
   visibleCount = PAGE_SIZE;
   const cat = CATEGORIES.find(c => c.id === categoryId);
-  feedTitleEl.textContent = cat ? cat.label : 'Stories';
+  document.title = cat ? `${cat.label} · LIYX` : 'LIYX';
   renderSkeleton();
 
   if (forceRefresh) Store.remove(`cat:${userCountry}:${categoryId}`);
