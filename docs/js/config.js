@@ -35,11 +35,27 @@ export const ADMOB = {
   appOpen: "ca-app-pub-3940256099942544/9257395921",       // TEST app open
 };
 
+// ---- RSS bridge (optional free API key) ----
+// The app works with ZERO signup by default (keyless rss2json).
+// Signing up for a free key at https://rss2json.com/sign-up
+// (no card, ~10,000 requests/day) unlocks two things this app
+// will automatically use once you paste the key below:
+//   1. Higher request limits (matters as traffic grows)
+//   2. The `count` parameter, so each source returns more items
+//      per fetch instead of rss2json's small default batch —
+//      this is the real fix for "feed feels thin," but it is
+//      confirmed to require a key: rss2json rejects the whole
+//      request with an error if `count` is sent without one.
+// One key covers every source in the app (BBC, NPR, your
+// Blogger feed, all of them) — it's not per-feed.
+// Leave this blank to keep running exactly as today, no signup.
+export const RSS2JSON_API_KEY = "";
+
 // ---- App identity ----
 export const APP = {
   name: "LIYX",
   author: "Liyog Bartoos O.",
-  version: "1.0.0",
+  version: "1.1.0",
   // How often we re-poll each category feed, in ms.
   pollIntervalMs: 5 * 60 * 1000,
   // Local cache freshness window — how long a fetched category
@@ -60,5 +76,3 @@ export const APP = {
 // own subdomain (e.g. https://news.liyogworld.com.ng/) — nothing
 // else in the codebase needs to change. Must end with a slash.
 export const SHARE_BASE_URL = "https://news.liyogworld.com.ng/";
-
-
