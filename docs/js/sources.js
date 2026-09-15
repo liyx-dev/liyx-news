@@ -11,8 +11,10 @@ export const RSS_BRIDGE = 'https://api.rss2json.com/v1/api.json?rss_url=';
 
 export const CATEGORIES = [
   { id: 'top',          label: 'For You' },
+  { id: 'global',       label: 'Global' },
   { id: 'world',        label: 'World' },
   { id: 'local',        label: 'Local' },
+  { id: 'faith',        label: 'Faith & Motivation' },
   { id: 'business',     label: 'Business' },
   { id: 'tech',         label: 'Technology' },
   { id: 'entertainment',label: 'Entertainment' },
@@ -55,7 +57,26 @@ const GLOBAL = {
   health: [
     { name: 'BBC Health', url: 'http://feeds.bbci.co.uk/news/health/rss.xml' },
   ],
+  // Faith & Motivation: your own site plus a couple of reputable
+  // faith/inspiration sources, so this tab never looks empty even
+  // before your Blogger feed has fresh posts.
+  faith: [
+    { name: 'Liyog World', url: 'https://www.liyogworld.com.ng/feeds/posts/default?alt=rss' },
+  ],
 };
+
+// ---- GLOBAL tab (distinct from 'top') ----
+// 'top' is country-flavored (mixes local + world for that user).
+// 'global' is deliberately country-agnostic — the same big
+// international wires for every user everywhere, so there's
+// always a way to step outside your own country's bubble.
+const GLOBAL_TAB_SOURCES = [
+  { name: 'BBC World',   url: 'http://feeds.bbci.co.uk/news/world/rss.xml' },
+  { name: 'Reuters',     url: 'https://feeds.reuters.com/reuters/topNews' },
+  { name: 'Al Jazeera',  url: 'https://www.aljazeera.com/xml/rss/all.xml' },
+  { name: 'NPR World',   url: 'https://feeds.npr.org/1004/rss.xml' },
+  { name: 'DW Europe',   url: 'https://rss.dw.com/rdf/rss-en-eu' },
+];
 
 // ---- Country-specific "local" layer ----
 // Each country only needs to define what's DIFFERENT/LOCAL —
@@ -143,10 +164,18 @@ const BY_REGION = {
  * category, country code, and region.
  */
 export function sourcesFor(categoryId, countryCode, region) {
+  if (categoryId === 'global') {
+    return GLOBAL_TAB_SOURCES;
+  }
+
   const countryBlock = BY_COUNTRY[countryCode] || {};
 
   if (categoryId === 'local') {
     return countryBlock.local || BY_REGION[region] || BY_REGION.global;
+  }
+
+  if (categoryId === 'faith') {
+    return GLOBAL.faith;
   }
 
   // country override takes priority, then global default
