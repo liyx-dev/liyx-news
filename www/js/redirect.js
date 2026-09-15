@@ -19,8 +19,12 @@
 
 import { findCachedStoryById } from './feeds.js';
 import { pingShare, resolveSharedStory } from './stats.js';
+import { SHARE_BASE_URL } from './config.js';
 
-const SHARE_BASE = 'https://liyx.app/#/go/'; // replace with your real deployed domain
+// Built from config.js's SHARE_BASE_URL so moving domains later
+// (e.g. to a liyogworld.com.ng subdomain) is a one-line change,
+// never a find-and-replace across the codebase.
+const SHARE_BASE = SHARE_BASE_URL.replace(/\/?$/, '/') + '#/go/';
 
 /** Builds the shareable LIYX link for a story (not the raw source link). */
 export function buildShareLink(story) {
