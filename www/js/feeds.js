@@ -49,7 +49,22 @@ function normalize(rawItem, sourceName, categoryId, countryCode) {
     category: categoryId,
     country: countryCode,
     pubDate: rawItem.pubDate ? new Date(rawItem.pubDate).getTime() : Date.now(),
+    // Video cards render a play affordance + open straight to
+    // YouTube instead of the "Read" bottom sheet flow, since a
+    // video has nothing to summarize into an extractive insight.
+    isVideo: categoryId === 'video',
   };
+
+  if (story.isVideo) {
+    // YouTube RSS snippets are often empty or just repeat the
+    // title, so skip the insight engine entirely for videos —
+    // an "insight" on a video is meaningless and would just be
+    // more headline-echo, exactly what we fixed for articles.
+    story.insight = '';
+    story.topics = [];
+    story.urgent = false;
+    return story;
+  }
 
   const ai = analyzeStory(story);
   story.insight = ai.insight;
@@ -60,11 +75,38 @@ function normalize(rawItem, sourceName, categoryId, countryCode) {
 }
 
 async function fetchSource(source, categoryId, countryCode) {
-  const res = await fetch(RSS_BRIDGE + encodeURIComponent(source.url));
+  // count=50 (rss2json's free-tier max) so each source contributes
+  // its real depth instead of the bridge's default ~10-item cap —
+  // this is the fix for "feed feels thin": we were only ever
+  // asking for the default batch, not the feed's actual history.
+  const url = `${RSS_BRIDGE}${encodeURIComponent(source.url)}&count=50`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error('bridge fetch failed: ' + source.name);
   const data = await res.json();
   if (data.status !== 'ok' || !Array.isArray(data.items)) throw new Error('bad feed: ' + source.name);
   return data.items.map(it => normalize(it, source.name, categoryId, countryCode));
+}
+
+/**
+ * Wraps fetchSource with one retry on failure (network blip or a
+ * transient bridge hiccup), so a single dropped request doesn't
+ * silently shrink the feed — part of the "robust and smart" bar.
+ * Still resolves to [] rather than throwing, so Promise.allSettled
+ * in fetchCategory always treats a fully-failed source as "empty,"
+ * never as a crash that could take other sources down with it.
+ */
+async function fetchSourceWithRetry(source, categoryId, countryCode) {
+  try {
+    return await fetchSource(source, categoryId, countryCode);
+  } catch (firstErr) {
+    try {
+      await new Promise(r => setTimeout(r, 600)); // brief backoff
+      return await fetchSource(source, categoryId, countryCode);
+    } catch (secondErr) {
+      console.warn(`[feeds] source unreachable after retry: ${source.name}`);
+      return [];
+    }
+  }
 }
 
 /**
@@ -75,14 +117,14 @@ async function fetchSource(source, categoryId, countryCode) {
  * they share one cache entry regardless of detected country.
  */
 export async function fetchCategory(categoryId, countryCode, region) {
-  const isCountryAgnostic = categoryId === 'global' || categoryId === 'faith';
+  const isCountryAgnostic = categoryId === 'global' || categoryId === 'faith' || categoryId === 'video';
   const cacheKey = isCountryAgnostic ? `cat:ALL:${categoryId}` : `cat:${countryCode}:${categoryId}`;
   const cached = Store.get(cacheKey, APP.localCacheTtlMs);
   if (cached) return { items: cached, fromCache: true };
 
   const sources = sourcesFor(categoryId, countryCode, region);
   const results = await Promise.allSettled(
-    sources.map(s => fetchSource(s, categoryId, countryCode))
+    sources.map(s => fetchSourceWithRetry(s, categoryId, countryCode))
   );
 
   let items = [];
