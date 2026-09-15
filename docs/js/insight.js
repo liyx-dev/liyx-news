@@ -51,17 +51,30 @@ function splitSentences(text) {
 }
 
 /**
- * Extractive one-line "insight" — the sentence most representative
- * of the piece's overall word distribution, Luhn-style.
+ * Extractive one-line "insight" — picks the sentence from the
+ * SNIPPET ONLY (never the title) that's most representative of
+ * the story's key terms. This guarantees the insight line is
+ * never just an echo of the headline: if the snippet has nothing
+ * beyond the headline to offer, we fall back to a topic-aware
+ * framing line instead of repeating it.
  */
-export function extractInsight(title, snippet) {
-  const fullText = `${title}. ${snippet}`;
-  const sentences = splitSentences(fullText);
-  if (sentences.length <= 1) return snippet.slice(0, 140);
+export function extractInsight(title, snippet, topics) {
+  const cleanSnippet = (snippet || '').trim();
+  const titleNorm = normalizeForCompare(title);
 
-  // word frequency across the whole text, minus stopwords
+  const sentences = splitSentences(cleanSnippet)
+    .filter(s => normalizeForCompare(s) !== titleNorm); // drop exact/near echoes of the title
+
+  if (!sentences.length) {
+    // Snippet added nothing beyond the headline — don't repeat it.
+    // Give a short, genuinely different framing line instead.
+    return framingLine(topics);
+  }
+
+  // word frequency across the snippet only (not the title), so
+  // headline words don't dominate sentence scoring
   const freq = {};
-  tokenize(fullText).forEach(w => {
+  tokenize(cleanSnippet).forEach(w => {
     if (STOPWORDS.has(w) || w.length < 3) return;
     freq[w] = (freq[w] || 0) + 1;
   });
@@ -75,7 +88,29 @@ export function extractInsight(title, snippet) {
     if (score > bestScore) { bestScore = score; best = sentence; }
   });
 
-  return best.length > 160 ? best.slice(0, 157) + '…' : best;
+  return best.length > 150 ? best.slice(0, 147) + '…' : best;
+}
+
+function normalizeForCompare(text) {
+  return (text || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+}
+
+// Short, topic-flavored lines used only when the snippet has
+// nothing to add beyond the headline — keeps the insight strip
+// useful rather than a repeated headline in smaller text.
+const FRAMING_LINES = {
+  Elections:  'Part of ongoing election coverage worth tracking.',
+  Conflict:   'A developing situation with regional implications.',
+  Markets:    'Could move markets or shift economic sentiment.',
+  Tech:       'A notable step in a fast-moving tech story.',
+  Sports:     'A result likely to shape the rest of the season.',
+  Health:     'A health story with broader public impact.',
+  Climate:    'Part of a wider pattern worth watching closely.',
+  Policy:     'A policy shift with knock-on effects ahead.',
+};
+function framingLine(topics) {
+  if (topics && topics.length && FRAMING_LINES[topics[0]]) return FRAMING_LINES[topics[0]];
+  return 'Developing story — tap through for full details.';
 }
 
 /** Tags a story with 0-2 topics based on keyword presence. */
@@ -101,9 +136,10 @@ export function isUrgent(title) {
  * recompute it on every render.
  */
 export function analyzeStory(story) {
+  const topics = tagTopics(story.title, story.snippet);
   return {
-    insight: extractInsight(story.title, story.snippet),
-    topics: tagTopics(story.title, story.snippet),
+    insight: extractInsight(story.title, story.snippet, topics),
+    topics,
     urgent: isUrgent(story.title),
   };
 }
