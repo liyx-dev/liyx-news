@@ -70,10 +70,13 @@ async function fetchSource(source, categoryId, countryCode) {
 /**
  * Fetch + cache a single category for the given country/region.
  * Cache key includes country so switching location never shows
- * stale cross-country data.
+ * stale cross-country data — except for 'global' and 'faith',
+ * which are deliberately the same for every user everywhere, so
+ * they share one cache entry regardless of detected country.
  */
 export async function fetchCategory(categoryId, countryCode, region) {
-  const cacheKey = `cat:${countryCode}:${categoryId}`;
+  const isCountryAgnostic = categoryId === 'global' || categoryId === 'faith';
+  const cacheKey = isCountryAgnostic ? `cat:ALL:${categoryId}` : `cat:${countryCode}:${categoryId}`;
   const cached = Store.get(cacheKey, APP.localCacheTtlMs);
   if (cached) return { items: cached, fromCache: true };
 
@@ -119,4 +122,3 @@ export function findCachedStoryById(id) {
   }
   return null;
 }
-
