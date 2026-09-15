@@ -71,17 +71,16 @@ export function svgFallback(sourceName, category) {
 }
 
 function storyThumb(item) {
+  const playOverlay = item.isVideo
+    ? '<div class="play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>'
+    : '';
   if (item.image) {
     const safeSrc = escapeHtml(item.image);
-    // Base64-encode source/category for the inline onerror handler
-    // instead of raw encodeURIComponent, since that leaves quote
-    // characters (') untouched and could break out of the HTML
-    // attribute for a source name like "O'Brien News".
     const encodedSource = btoa(unescape(encodeURIComponent(item.source || '')));
     const encodedCategory = btoa(unescape(encodeURIComponent(item.category || '')));
-    return `<div class="story-media"><img src="${safeSrc}" alt="" loading="lazy" onerror="this.parentElement.outerHTML = window.__liyxFallback('${encodedSource}','${encodedCategory}');"></div>`;
+    return `<div class="story-media${item.isVideo ? ' is-video' : ''}"><img src="${safeSrc}" alt="" loading="lazy" onerror="this.parentElement.outerHTML = window.__liyxFallback('${encodedSource}','${encodedCategory}');">${playOverlay}</div>`;
   }
-  return `<div class="story-media svg-fallback">${svgFallback(item.source, item.category)}</div>`;
+  return `<div class="story-media svg-fallback${item.isVideo ? ' is-video' : ''}">${svgFallback(item.source, item.category)}${playOverlay}</div>`;
 }
 
 // Exposed once globally so the inline onerror handler above (which
@@ -133,8 +132,9 @@ export function storyCard(item, counts) {
       ${topicChips(item.topics)}
       <footer class="story-actions">
         <button class="act-btn read-btn" data-action="open">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-          Read
+          ${item.isVideo
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 5v14l11-7z"/></svg>Watch'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Read'}
         </button>
         <span class="act-stat${c.views > 0 ? ' is-live' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>${formatCount(c.views)}</span>
         <button class="act-btn share-btn" data-action="share">
@@ -186,11 +186,37 @@ export function stateMessage(title, message, showRetry) {
     </div>`;
 }
 
+// Extracts an 11-char YouTube video ID from either a watch URL
+// or a youtu.be short link, so we can build an embed iframe.
+function youtubeIdFrom(url) {
+  const m = (url || '').match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
 /**
- * The bottom sheet content for a single story ("Read").
+ * The bottom sheet content for a single story ("Read"/"Watch").
  */
 export function sheetContent(item) {
   const hasDistinctSnippet = item.snippet && item.snippet !== item.insight;
+
+  if (item.isVideo) {
+    const vid = youtubeIdFrom(item.link);
+    const media = vid
+      ? `<div class="sheet-video"><iframe src="https://www.youtube.com/embed/${vid}" title="${escapeHtml(item.title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
+      : (item.image ? `<img class="sheet-img" src="${item.image}" alt="">` : '');
+    return `
+      ${media}
+      <div class="sheet-kicker"><span>${escapeHtml(item.source)}</span><span class="dot">·</span><span>${timeAgo(item.pubDate)} ago</span></div>
+      <h2 class="sheet-title">${escapeHtml(item.title)}</h2>
+      ${item.snippet ? `<div class="sheet-text"><p>${escapeHtml(item.snippet)}</p></div>` : ''}
+      <div class="sheet-actions">
+        <a class="sheet-link" href="${item.link}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>
+        <button class="sheet-share" id="sheetShareBtn" aria-label="Share via LIYX">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5 15.4 17.5M15.4 6.5 8.6 10.5"/></svg>
+        </button>
+      </div>`;
+  }
+
   const media = item.image
     ? `<img class="sheet-img" src="${item.image}" alt="">`
     : `<div class="sheet-img svg-fallback">${svgFallback(item.source, item.category)}</div>`;
