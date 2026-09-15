@@ -7,7 +7,7 @@
 import { RSS_BRIDGE, sourcesFor } from './sources.js';
 import { Store } from './store.js';
 import { analyzeStory } from './insight.js';
-import { APP } from './config.js';
+import { APP, RSS2JSON_API_KEY } from './config.js';
 
 function stripHtml(html) {
   if (!html) return '';
@@ -75,11 +75,14 @@ function normalize(rawItem, sourceName, categoryId, countryCode) {
 }
 
 async function fetchSource(source, categoryId, countryCode) {
-  // count=50 (rss2json's free-tier max) so each source contributes
-  // its real depth instead of the bridge's default ~10-item cap —
-  // this is the fix for "feed feels thin": we were only ever
-  // asking for the default batch, not the feed's actual history.
-  const url = `${RSS_BRIDGE}${encodeURIComponent(source.url)}&count=50`;
+  // count/api_key are ONLY appended when a real key is configured
+  // in config.js — confirmed that rss2json rejects the whole
+  // request with status:"error" if count is sent without a key,
+  // so this must never fire in the keyless default configuration.
+  let url = RSS_BRIDGE + encodeURIComponent(source.url);
+  if (RSS2JSON_API_KEY) {
+    url += `&api_key=${encodeURIComponent(RSS2JSON_API_KEY)}&count=50`;
+  }
   const res = await fetch(url);
   if (!res.ok) throw new Error('bridge fetch failed: ' + source.name);
   const data = await res.json();
@@ -164,4 +167,3 @@ export function findCachedStoryById(id) {
   }
   return null;
 }
-
