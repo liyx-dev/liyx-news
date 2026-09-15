@@ -14,6 +14,7 @@ export const CATEGORIES = [
   { id: 'global',       label: 'Global' },
   { id: 'world',        label: 'World' },
   { id: 'local',        label: 'Local' },
+  { id: 'video',        label: 'Video' },
   { id: 'faith',        label: 'Faith & Motivation' },
   { id: 'business',     label: 'Business' },
   { id: 'tech',         label: 'Technology' },
@@ -76,6 +77,19 @@ const GLOBAL_TAB_SOURCES = [
   { name: 'Al Jazeera',  url: 'https://www.aljazeera.com/xml/rss/all.xml' },
   { name: 'NPR World',   url: 'https://feeds.npr.org/1004/rss.xml' },
   { name: 'DW Europe',   url: 'https://rss.dw.com/rdf/rss-en-eu' },
+];
+
+// ---- VIDEO tab ----
+// YouTube publishes a free, keyless RSS feed per channel at
+// youtube.com/feeds/videos.xml?channel_id=XXXX — no API key,
+// no quota, works through the same RSS bridge as everything
+// else. Channel IDs below are verified against each outlet's
+// official channel (not guessed) — to add another channel,
+// find its ID via https://commentpicker.com/youtube-channel-id.php
+// or the channel's "About" page share link, then add one line.
+const VIDEO_TAB_SOURCES = [
+  { name: 'BBC News',      url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UC16niRr50-MSBwiO3YDb3RA' },
+  { name: 'Al Jazeera English', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCNye-wNBqNL5ZzHSJj3l8Bg' },
 ];
 
 // ---- Country-specific "local" layer ----
@@ -166,6 +180,10 @@ const BY_REGION = {
 export function sourcesFor(categoryId, countryCode, region) {
   if (categoryId === 'global') {
     return GLOBAL_TAB_SOURCES;
+  }
+
+  if (categoryId === 'video') {
+    return VIDEO_TAB_SOURCES;
   }
 
   const countryBlock = BY_COUNTRY[countryCode] || {};
