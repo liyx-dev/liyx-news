@@ -1,0 +1,57 @@
+/* ============================================================
+   DESIGN TOKENS — light is the default theme now.
+   Same LIYX identity (serif headline + grotesk UI + signal
+   red), re-tuned so light mode feels premium, not just
+   "inverted dark mode."
+============================================================= */
+:root{
+  --signal:#E8442C;
+  --signal-dim:#C6371F;
+
+  /* light (default) */
+  --bg:#FFFFFF;
+  --bg-2:#F6F5F1;
+  --fg:#14151A;
+  --sub:#63666D;
+  --hair:#EAE8E1;
+  --card-hover:#FAF9F6;
+  --sheet-bg:#FFFFFF;
+  --chip-bg:#F1EFE9;
+  --chip-fg:#4A4D53;
+
+  --serif:'Fraunces', Georgia, serif;
+  --sans:'Space Grotesk', 'Segoe UI', sans-serif;
+}
+
+[data-theme="dark"]{
+  --bg:#0A0B0D;
+  --bg-2:#111318;
+  --fg:#EDECE8;
+  --sub:#9A9DA4;
+  --hair:#232529;
+  --card-hover:#15171C;
+  --sheet-bg:#16181D;
+  --chip-bg:#1C1E23;
+  --chip-fg:#C9CBD1;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ -webkit-text-size-adjust:100%; }
+body{
+  background:var(--bg);
+  color:var(--fg);
+  font-family:var(--sans);
+  transition:background .3s ease, color .3s ease;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
+}
+a{ color:inherit; text-decoration:none; }
+button{ font-family:inherit; cursor:pointer; background:none; border:none; color:inherit; }
+img{ max-width:100%; display:block; }
+::selection{ background:var(--signal); color:#fff; }
+::-webkit-scrollbar{ width:8px; height:8px; }
+::-webkit-scrollbar-thumb{ background:var(--hair); border-radius:0; }
+::-webkit-scrollbar-track{ background:transparent; }
