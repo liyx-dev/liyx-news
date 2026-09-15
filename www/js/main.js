@@ -128,6 +128,7 @@ function closeSheet() {
   scrim.classList.remove('open');
   sheet.classList.remove('open');
   document.body.style.overflow = '';
+  setActiveTab('feed');
 }
 scrim.addEventListener('click', closeSheet);
 sheetClose.addEventListener('click', closeSheet);
@@ -174,6 +175,128 @@ refreshBtn.addEventListener('click', () => {
 setInterval(() => {
   if (document.visibilityState === 'visible') loadCategory(activeCategory, true);
 }, APP.pollIntervalMs);
+
+// ============================================================
+// Bottom tab bar — real navigation, not decorative.
+// Feed: scrolls to top of the current feed (default view).
+// Search: focuses an in-page search box that filters currentItems.
+// Categories: opens the category rail as a full picker sheet
+//             (useful once more than ~5 categories exist and
+//             the horizontal rail can't show them all at once).
+// You: opens a lightweight settings sheet (theme, location, about).
+// ============================================================
+const tabButtons = document.querySelectorAll('.tab-btn');
+function setActiveTab(name) {
+  tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+}
+
+tabButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    setActiveTab(tab);
+    if (tab === 'feed') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (tab === 'search') {
+      openSearchSheet();
+    } else if (tab === 'categories') {
+      openCategoriesSheet();
+    } else if (tab === 'you') {
+      openYouSheet();
+    }
+  });
+});
+
+function openSearchSheet() {
+  sheetScroll.innerHTML = `
+    <div class="util-sheet">
+      <h2 class="sheet-title" style="font-size:20px;">Search headlines</h2>
+      <input type="search" id="searchInput" class="search-input" placeholder="Try “inflation”, “Lagos”, “elections”…" autofocus>
+      <div id="searchResults" class="search-results"></div>
+    </div>`;
+  scrim.classList.add('open');
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const input = document.getElementById('searchInput');
+  const results = document.getElementById('searchResults');
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { results.innerHTML = ''; return; }
+    const matches = currentItems.filter(s =>
+      s.title.toLowerCase().includes(q) || (s.insight || '').toLowerCase().includes(q)
+    ).slice(0, 12);
+    results.innerHTML = matches.length
+      ? matches.map(s => `<button class="search-hit" data-id="${s.id}">${s.title}</button>`).join('')
+      : `<p class="search-empty">No matches in the current feed — try another tab or refresh.</p>`;
+    results.querySelectorAll('.search-hit').forEach(hit => {
+      hit.addEventListener('click', () => {
+        const story = currentItems.find(s => s.id === hit.dataset.id);
+        if (story) openSheet(story);
+      });
+    });
+  });
+}
+
+function openCategoriesSheet() {
+  sheetScroll.innerHTML = `
+    <div class="util-sheet">
+      <h2 class="sheet-title" style="font-size:20px;">Browse categories</h2>
+      <div class="cat-grid">
+        ${CATEGORIES.map(c => `<button class="cat-tile${c.id === activeCategory ? ' active' : ''}" data-cat="${c.id}">${c.label}</button>`).join('')}
+      </div>
+    </div>`;
+  scrim.classList.add('open');
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  sheetScroll.querySelectorAll('.cat-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      activeCategory = tile.dataset.cat;
+      renderRail();
+      loadCategory(activeCategory);
+      closeSheet();
+      setActiveTab('feed');
+    });
+  });
+}
+
+function openYouSheet() {
+  const theme = document.body.getAttribute('data-theme');
+  sheetScroll.innerHTML = `
+    <div class="util-sheet">
+      <h2 class="sheet-title" style="font-size:20px;">You</h2>
+      <div class="you-row">
+        <span>Reading location</span>
+        <button class="you-action" id="youChangeLoc">${countryLabel(userCountry)} · change</button>
+      </div>
+      <div class="you-row">
+        <span>Appearance</span>
+        <button class="you-action" id="youToggleTheme">${theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}</button>
+      </div>
+      <div class="you-row">
+        <span>Refresh feed</span>
+        <button class="you-action" id="youRefresh">Refresh now</button>
+      </div>
+      <p class="you-about">LIYX is an independent live news reader built by Liyog Bartoos O. Stories link back to their original publishers.</p>
+    </div>`;
+  scrim.classList.add('open');
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  document.getElementById('youChangeLoc').addEventListener('click', () => {
+    closeSheet();
+    document.getElementById('changeLocBtn')?.click();
+  });
+  document.getElementById('youToggleTheme').addEventListener('click', () => {
+    Theme.toggle(themeIcon);
+    closeSheet();
+  });
+  document.getElementById('youRefresh').addEventListener('click', () => {
+    closeSheet();
+    loadCategory(activeCategory, true);
+    showToast('Refreshing…');
+  });
+}
 
 // ============================================================
 // Theme
