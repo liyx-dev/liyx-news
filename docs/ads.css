@@ -1,0 +1,17 @@
+/* ============================================================
+   ADS — native feed ad cards + banner reserved space.
+   Styled to sit naturally in the feed but always clearly
+   labeled "Sponsored" per AdMob policy requirements.
+============================================================= */
+.ad-card{ background:var(--bg-2); border-radius:14px; }
+.sponsored-tag{
+  display:inline-block;
+  font-size:10px; font-weight:700; letter-spacing:.05em;
+  color:var(--sub); background:var(--chip-bg);
+  border-radius:5px; padding:3px 8px; margin-bottom:10px;
+}
+.ad-placeholder{ opacity:.7; }
+
+/* reserved space so the docked AdMob banner (native, drawn
+   outside the webview) never overlaps the tab bar content */
+.banner-space{ height:50px; flex-shrink:0; }
