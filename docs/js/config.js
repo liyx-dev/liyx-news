@@ -53,3 +53,12 @@ export const APP = {
   // How many real stories between one native ad card in the feed.
   nativeAdEveryN: 6,
 };
+
+// ---- Share link base ----
+// This is the ONLY place the app's public share domain is defined.
+// Change this one line when you move from GitHub Pages to your
+// own subdomain (e.g. https://news.liyogworld.com.ng/) — nothing
+// else in the codebase needs to change. Must end with a slash.
+export const SHARE_BASE_URL = "https://news.liyogworld.com.ng/";
+
+
