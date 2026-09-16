@@ -12,7 +12,7 @@ import { Store } from './store.js';
 
 // Point this at your deployed Worker once live, e.g.
 // "https://chronik-api.yourname.workers.dev/api/chronik"
-const CHRONIK_API_BASE = "https://chronik-api.workers.dev/api/chronik";
+const CHRONIK_API_BASE = "https://chronik-api.goddayojoka22.workers.dev/api/chronik";
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // matches the news feed's rhythm
 
