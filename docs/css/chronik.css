@@ -13,6 +13,21 @@
   vertical-align:middle;
 }
 
+/* ---- Home screen hierarchy ---- */
+.home-greeting{ padding:var(--sp-2) 4px var(--sp-4); }
+.home-greeting h1{
+  font-family:var(--serif); font-weight:700; font-size:26px;
+  letter-spacing:-0.015em; margin-bottom:4px;
+}
+.home-greeting p{ font-size:14px; color:var(--sub); }
+.home-section-label{
+  font-size:11px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--sub-2);
+  margin:var(--sp-5) 4px var(--sp-2);
+}
+.home-section-label:first-of-type{ margin-top:0; }
+.home-greeting-skel{ height:52px; border-radius:10px; margin-bottom:var(--sp-4); }
+
 /* ---- Quote card ---- */
 .quote-card .author-avatar img{ width:100%; height:100%; border-radius:50%; object-fit:cover; }
 .quote-visual{
