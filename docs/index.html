@@ -41,7 +41,7 @@
   window.addEventListener('load', function () {
     if (window.google && window.google.accounts) {
       window.google.accounts.id.initialize({
-        client_id: 'YOUR-GOOGLE-CLIENT-ID.apps.googleusercontent.com',
+        client_id: '738340407129-v640jemang124g9m1rst5gn1mrun5nch.apps.googleusercontent.com',
         callback: function (response) {
           import('./js/auth.js').then(function (Auth) {
             Auth.handleGoogleCredential(response).then(function () {
