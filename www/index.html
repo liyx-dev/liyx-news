@@ -46,7 +46,15 @@
           import('./js/auth.js').then(function (Auth) {
             Auth.handleGoogleCredential(response).then(function () {
               window.location.reload();
+            }).catch(function (err) {
+              // TEMPORARY diagnostic - surfaces the real failure
+              // reason instead of silently doing nothing, which is
+              // exactly what was happening before this fix.
+              alert('Sign-in failed: ' + err.message);
+              console.error('Chronik sign-in error:', err);
             });
+          }).catch(function (err) {
+            alert('Could not load auth module: ' + err.message);
           });
         },
       });
