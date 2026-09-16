@@ -9,6 +9,14 @@
 
 export const RSS_BRIDGE = 'https://api.rss2json.com/v1/api.json?rss_url=';
 
+// The single source of truth for the Chronik Worker's base URL.
+// Both chronik.js and auth.js import this constant rather than
+// each hardcoding their own copy - this is exactly the bug that
+// bit us once already (auth.js quietly kept the placeholder URL
+// after chronik.js was updated to the real one). One place, from
+// now on: update this line, both files pick it up automatically.
+export const CHRONIK_API_BASE = "https://chronik-api.goddayojoka22.workers.dev/api/chronik";
+
 export const CATEGORIES = [
   { id: 'top',          label: 'For You' },
   { id: 'global',       label: 'Global' },
