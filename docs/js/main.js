@@ -23,6 +23,7 @@ import * as Theme from './theme.js';
 import * as Ads from './ads.js';
 import * as Chronik from './chronik.js';
 import * as ChronikRender from './chronik-render.js';
+import * as Auth from './auth.js';
 
 const scrim = document.getElementById('scrim');
 const sheet = document.getElementById('sheet');
@@ -594,9 +595,17 @@ document.getElementById('profileBackBtn').addEventListener('click', function () 
 
 function openYouSheet() {
   const theme = document.body.getAttribute('data-theme');
+  const signedIn = Auth.isSignedIn();
+  const profile = Auth.getCurrentProfile();
+
+  const accountSection = signedIn
+    ? '<div class="you-row"><span>Signed in as ' + (profile.display_name || 'You') + '</span><button class="you-action" id="youSignOut">Sign out</button></div>'
+    : '<div class="you-signin"><p>Sign in to like, comment, and post as yourself across Chronik.</p><div id="googleSignInBtn"></div></div>';
+
   sheetScroll.innerHTML =
     '<div class="util-sheet">' +
     '<h2 class="sheet-title" style="font-size:20px;">You</h2>' +
+    accountSection +
     '<div class="you-row"><span>Reading location</span><button class="you-action" id="youChangeLoc">' + countryLabel(userCountry) + ' &middot; change</button></div>' +
     '<div class="you-row"><span>Appearance</span><button class="you-action" id="youToggleTheme">' + (theme === 'dark' ? 'Switch to Light' : 'Switch to Dark') + '</button></div>' +
     '<div class="you-row"><span>Refresh everything</span><button class="you-action" id="youRefresh">Refresh now</button></div>' +
@@ -605,6 +614,20 @@ function openYouSheet() {
   scrim.classList.add('open');
   sheet.classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  if (!signedIn && window.google && window.google.accounts) {
+    window.google.accounts.id.renderButton(
+      document.getElementById('googleSignInBtn'),
+      { theme: theme === 'dark' ? 'filled_black' : 'outline', size: 'large', width: 260 }
+    );
+  }
+
+  const signOutBtn = document.getElementById('youSignOut');
+  if (signOutBtn) signOutBtn.addEventListener('click', async function () {
+    await Auth.signOut();
+    showToast('Signed out');
+    openYouSheet(); // refresh the sheet to show the sign-in button again
+  });
 
   document.getElementById('youChangeLoc').addEventListener('click', function () {
     closeSheet();
@@ -673,6 +696,7 @@ async function boot() {
   renderChronikRail();
 
   Chronik.startEngagementFlushLoop();
+  await Auth.restoreSession();
 
   await Ads.initAds();
   Ads.showBanner();
