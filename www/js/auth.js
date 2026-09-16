@@ -8,8 +8,8 @@
 // ============================================================
 
 import { Store } from './store.js';
+import { CHRONIK_API_BASE } from './sources.js';
 
-const CHRONIK_API_BASE = "https://chronik-api.workers.dev/api/chronik";
 const SESSION_KEY = 'chronik:session-token';
 
 let currentProfile = null;
@@ -37,7 +37,11 @@ export async function handleGoogleCredential(response) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ id_token: idToken }),
   });
-  if (!res.ok) throw new Error('Sign-in failed');
+  if (!res.ok) {
+    let detail = '';
+    try { const body = await res.json(); detail = body.error || ''; } catch (e) { /* non-JSON error body */ }
+    throw new Error('Sign-in failed (' + res.status + '): ' + (detail || 'unknown reason'));
+  }
   const data = await res.json();
   setSessionToken(data.session_token);
   currentProfile = data.profile;
