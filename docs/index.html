@@ -28,8 +28,32 @@
 <link rel="stylesheet" href="css/sheet.css">
 <link rel="stylesheet" href="css/ads.css">
 <link rel="stylesheet" href="css/chronik.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body data-theme="light">
+
+<!-- Google Sign-In init. GOOGLE_CLIENT_ID is a PUBLIC identifier
+     (safe to appear in client HTML) - it identifies which app is
+     asking, it is not a secret. Replace with your real client ID
+     from Google Cloud Console once created, see
+     docs/08-GOOGLE-AUTH-SETUP.md -->
+<script>
+  window.addEventListener('load', function () {
+    if (window.google && window.google.accounts) {
+      window.google.accounts.id.initialize({
+        client_id: 'YOUR-GOOGLE-CLIENT-ID.apps.googleusercontent.com',
+        callback: function (response) {
+          import('./js/auth.js').then(function (Auth) {
+            Auth.handleGoogleCredential(response).then(function () {
+              window.location.reload();
+            });
+          });
+        },
+      });
+    }
+  });
+</script>
+
 
 <header class="masthead">
   <div class="masthead-top">
