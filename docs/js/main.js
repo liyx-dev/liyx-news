@@ -241,25 +241,52 @@ function wireQuoteCardEvents(container) {
 
     Chronik.pingQuoteView(id);
 
+    // Tapping the author's avatar or name opens their living
+    // archive profile — this was the missing link: profiles were
+    // only reachable from a Today-in-History card before, never
+    // from the quote feed itself where people actually browse.
+    const authorArea = card.querySelector('.story-top');
+    if (authorArea && quote.profile_id) {
+      authorArea.style.cursor = 'pointer';
+      authorArea.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openProfile(quote.profile_id);
+      });
+    }
+
     const likeBtn = card.querySelector('[data-action="like"]');
-    if (likeBtn) likeBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      if (likeBtn.classList.contains('is-liked')) return;
-      likeBtn.classList.add('is-liked');
-      likeBtn.textContent = (parseInt(likeBtn.textContent, 10) || 0) + 1;
-      Chronik.pingQuoteLike(id);
-    });
+    if (likeBtn) {
+      const likeIconHtml = likeBtn.querySelector('svg').outerHTML;
+      likeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (likeBtn.classList.contains('is-liked')) return;
+        likeBtn.classList.add('is-liked');
+        const newCount = (parseInt(likeBtn.textContent, 10) || 0) + 1;
+        likeBtn.innerHTML = likeIconHtml + ' ' + newCount; // preserve the heart icon, don't overwrite it
+        Chronik.pingQuoteLike(id);
+      });
+    }
 
     const shareBtn = card.querySelector('[data-action="share"]');
-    if (shareBtn) shareBtn.addEventListener('click', async function (e) {
+    if (shareBtn) shareBtn.addEventListener('click', function (e) {
       e.stopPropagation();
-      Chronik.pingQuoteShare(id);
       const shareText = '"' + quote.text + '" — ' + quote.author_name + ', via Chronik';
+
+      // navigator.share() MUST be the first thing called in this
+      // handler, synchronously, with nothing awaited before it —
+      // Chrome/WebView silently rejects it (NotAllowedError, no
+      // visible error) if the "user gesture" context has expired
+      // by the time it's called. Everything else (the engagement
+      // ping) happens AFTER, never before.
       if (navigator.share) {
-        try { await navigator.share({ text: shareText }); } catch (err) { /* cancelled */ }
+        navigator.share({ text: shareText })
+          .then(function () { Chronik.pingQuoteShare(id); })
+          .catch(function () { /* user cancelled — not an error, don't ping */ });
       } else {
-        await navigator.clipboard?.writeText(shareText);
-        showToast('Quote copied');
+        navigator.clipboard?.writeText(shareText).then(function () {
+          showToast('Quote copied');
+          Chronik.pingQuoteShare(id);
+        });
       }
     });
 
@@ -443,6 +470,10 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
     else if (tab === 'chronik') showScreen('chronik');
     else if (tab === 'you') openYouSheet();
   });
+});
+
+document.getElementById('profileBackBtn').addEventListener('click', function () {
+  showScreen('chronik');
 });
 
 function openYouSheet() {
