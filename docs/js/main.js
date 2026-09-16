@@ -136,6 +136,16 @@ function wireStoryCardEvents(container) {
       e.stopPropagation();
       const result = await shareStory(item);
       if (result === 'copied') showToast('Link copied');
+      if (result === 'native' || result === 'copied') {
+        // Bump the on-screen count immediately rather than waiting
+        // up to 2 minutes for fetchCounts' cache to expire - the
+        // real total in Supabase is already correct either way,
+        // this just keeps what's on screen from feeling stale.
+        const statEl = shareBtn;
+        const current = parseInt(statEl.textContent, 10) || 0;
+        const iconHtml = statEl.querySelector('svg').outerHTML;
+        statEl.innerHTML = iconHtml + ' ' + (current + 1);
+      }
     });
     card.addEventListener('click', function () { openSheet(item); });
   });
@@ -236,7 +246,7 @@ async function loadChronikFeed() {
 function wireQuoteCardEvents(container) {
   container.querySelectorAll('.quote-card[data-quote-id]').forEach(function (card) {
     const id = card.getAttribute('data-quote-id');
-    const quote = currentQuotes.find(function (q) { return q.id === id; });
+    const quote = currentQuotes.find(function (q) { return q.id === id; }) || container.__singleQuote;
     if (!quote) return;
 
     Chronik.pingQuoteView(id);
@@ -303,6 +313,30 @@ function wireQuoteCardEvents(container) {
   });
 }
 
+/**
+ * Full-quote bottom sheet — the fix for "tapping a quote in the
+ * grid only shows a comment box." This shows the actual quote,
+ * large, with its own like/share/comment actions all present.
+ * Comments are ONE option here, not the automatic destination.
+ */
+function openQuoteSheet(quote) {
+  sheetScroll.innerHTML =
+    '<div class="quote-sheet">' + ChronikRender.quoteCard(quote) + '</div>';
+  scrim.classList.add('open');
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  sheetScroll.__singleQuote = quote; // lets wireQuoteCardEvents find this quote even though it's not in currentQuotes
+  wireQuoteCardEvents(sheetScroll); // this also pings the view once, internally
+
+  // wireQuoteCardEvents wires a profile-tap on .story-top, but
+  // we're already ON that profile — remove it here so tapping
+  // the author inside their own quote sheet doesn't try to
+  // "navigate" to the page already open underneath.
+  const authorArea = sheetScroll.querySelector('.story-top');
+  if (authorArea) authorArea.style.cursor = 'default';
+}
+
 async function openCommentsSheet(targetType, targetId) {
   sheetScroll.innerHTML =
     '<div class="util-sheet">' +
@@ -336,26 +370,30 @@ async function openCommentsSheet(targetType, targetId) {
 }
 
 async function openProfile(profileId) {
-  showToast('DEBUG: openProfile called with ' + profileId); // TEMPORARY - remove after diagnosis
   showScreen('profile');
   profileContentEl.innerHTML = Array.from({ length: 2 }, Render.skeletonCard).join('');
   Chronik.pingProfileView(profileId);
 
   try {
     const data = await Chronik.getProfile(profileId);
-    showToast('DEBUG: profile data loaded OK'); // TEMPORARY
     profileContentEl.innerHTML =
       ChronikRender.livingArchiveHeader(data.profile) +
       ChronikRender.livingArchiveBody(data.quotes, data.timeline);
 
+    // Tapping a grid quote opens the FULL quote (like/share/comment
+    // all available) rather than jumping straight into comments -
+    // comments are one option inside that view, not the default action.
     profileContentEl.querySelectorAll('.archive-grid-item[data-quote-id]').forEach(function (el) {
       el.addEventListener('click', function () {
         const quote = data.quotes.find(function (q) { return q.id === el.dataset.quoteId; });
-        if (quote) openCommentsSheet('quote', quote.id);
+        if (quote) openQuoteSheet(Object.assign({}, quote, {
+          author_name: data.profile.display_name,
+          author_avatar: data.profile.avatar_image_url,
+          author_is_admin: data.profile.is_admin,
+        }));
       });
     });
   } catch (err) {
-    showToast('DEBUG ERROR: ' + err.message); // TEMPORARY - remove after diagnosis
     profileContentEl.innerHTML = Render.stateMessage(
       'Archive unavailable',
       'Couldn\u2019t load this profile right now. Check your connection and try again.',
@@ -365,31 +403,37 @@ async function openProfile(profileId) {
 }
 
 async function loadHomeFeed() {
-  homeFeedEl.innerHTML = Array.from({ length: 3 }, Render.skeletonCard).join('');
+  homeFeedEl.innerHTML = '<div class="home-greeting-skel sk-box"></div>' + Array.from({ length: 3 }, Render.skeletonCard).join('');
 
   const blocks = [];
+  let historyBlock = null;
 
   try {
     const history = await Chronik.getTodayHistory();
     const historyHtml = ChronikRender.todayHistoryCard(history);
-    if (historyHtml) blocks.push({ html: historyHtml, kind: 'history', data: history });
+    if (historyHtml) historyBlock = { html: historyHtml, kind: 'history', data: history };
   } catch (e) { /* Chronik unreachable — Home still works with just news */ }
 
   try {
     const result = await fetchCategory('top', userCountry, userRegion);
-    result.items.slice(0, 4).forEach(function (item) {
-      blocks.push({ html: Render.storyCard(item), kind: 'news', data: item });
+    const topItems = result.items.slice(0, 4);
+    const counts = FEATURES.supabaseStatsEnabled
+      ? await fetchCounts(topItems.map(function (s) { return s.id; }))
+      : {};
+    topItems.forEach(function (item) {
+      blocks.push({ html: Render.storyCard(item, counts), kind: 'news', data: item });
     });
   } catch (e) { /* news unreachable — Home still shows whatever else loaded */ }
 
+  let quoteBlocks = [];
   try {
     const quotes = await Chronik.listQuotes(null);
-    quotes.slice(0, 2).forEach(function (q) {
-      blocks.push({ html: ChronikRender.quoteCard(q), kind: 'quote', data: q });
+    quoteBlocks = quotes.slice(0, 2).map(function (q) {
+      return { html: ChronikRender.quoteCard(q), kind: 'quote', data: q };
     });
   } catch (e) { /* Chronik unreachable */ }
 
-  if (!blocks.length) {
+  if (!historyBlock && !blocks.length && !quoteBlocks.length) {
     homeFeedEl.innerHTML = Render.stateMessage(
       'Quiet for now',
       'Couldn\u2019t reach any sources right now. Check your connection and try again.',
@@ -400,8 +444,27 @@ async function loadHomeFeed() {
     return;
   }
 
-  homeFeedEl.innerHTML = blocks.map(function (b) { return b.html; }).join('');
-  wireHomeEvents(blocks);
+  // Real hierarchy instead of one flat stack: a greeting, then
+  // History gets its own "hero" slot at the top (it's the one
+  // thing unique to today), then clearly labeled sections for
+  // News and Chronik rather than an undifferentiated mix.
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
+  let html = '<div class="home-greeting"><h1>' + greeting + '</h1><p>Here\u2019s what\u2019s worth your time today.</p></div>';
+
+  if (historyBlock) {
+    html += '<div class="home-section-label">On this day</div>' + historyBlock.html;
+  }
+  if (blocks.length) {
+    html += '<div class="home-section-label">Top stories</div>' + blocks.map(function (b) { return b.html; }).join('');
+  }
+  if (quoteBlocks.length) {
+    html += '<div class="home-section-label">From Chronik</div>' + quoteBlocks.map(function (b) { return b.html; }).join('');
+  }
+
+  homeFeedEl.innerHTML = html;
+  wireHomeEvents(blocks.concat(quoteBlocks).concat(historyBlock ? [historyBlock] : []));
 }
 
 function wireHomeEvents(blocks) {
@@ -417,6 +480,11 @@ function wireHomeEvents(blocks) {
       e.stopPropagation();
       const result = await shareStory(block.data);
       if (result === 'copied') showToast('Link copied');
+      if (result === 'native' || result === 'copied') {
+        const current = parseInt(shareBtn.textContent, 10) || 0;
+        const iconHtml = shareBtn.querySelector('svg').outerHTML;
+        shareBtn.innerHTML = iconHtml + ' ' + (current + 1);
+      }
     });
   });
 
@@ -424,15 +492,54 @@ function wireHomeEvents(blocks) {
     const id = card.getAttribute('data-quote-id');
     const block = blocks.find(function (b) { return b.kind === 'quote' && b.data.id === id; });
     if (!block) return;
+    const quote = block.data;
     Chronik.pingQuoteView(id);
+
+    // Same profile-tap behavior as the Chronik tab's quote cards -
+    // this was simply never wired for Home, a real gap, now fixed.
+    const authorArea = card.querySelector('.story-top');
+    if (authorArea && quote.profile_id) {
+      authorArea.style.cursor = 'pointer';
+      authorArea.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openProfile(quote.profile_id);
+      });
+    }
+
     const likeBtn = card.querySelector('[data-action="like"]');
-    if (likeBtn) likeBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      Chronik.pingQuoteLike(id);
-      likeBtn.classList.add('is-liked');
-    });
+    if (likeBtn) {
+      const likeIconHtml = likeBtn.querySelector('svg').outerHTML;
+      likeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (likeBtn.classList.contains('is-liked')) return;
+        likeBtn.classList.add('is-liked');
+        const newCount = (parseInt(likeBtn.textContent, 10) || 0) + 1;
+        likeBtn.innerHTML = likeIconHtml + ' ' + newCount;
+        Chronik.pingQuoteLike(id);
+      });
+    }
+
     const commentBtn = card.querySelector('[data-action="comment"]');
     if (commentBtn) commentBtn.addEventListener('click', function (e) { e.stopPropagation(); openCommentsSheet('quote', id); });
+
+    // Share was entirely missing on Home's quote cards - fixed to
+    // match the Chronik tab's behavior exactly (navigator.share
+    // called first/synchronously, per the earlier gesture-timing fix).
+    const shareBtn = card.querySelector('[data-action="share"]');
+    if (shareBtn) shareBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const shareText = '"' + quote.text + '" — ' + quote.author_name + ', via Chronik';
+      if (navigator.share) {
+        navigator.share({ text: shareText })
+          .then(function () { Chronik.pingQuoteShare(id); })
+          .catch(function () { /* cancelled */ });
+      } else {
+        navigator.clipboard?.writeText(shareText).then(function () {
+          showToast('Quote copied');
+          Chronik.pingQuoteShare(id);
+        });
+      }
+    });
   });
 
   homeFeedEl.querySelectorAll('.history-card[data-history-id]').forEach(function (card) {
@@ -443,6 +550,7 @@ function wireHomeEvents(blocks) {
     });
   });
 }
+
 
 function openSheet(item) {
   sheetScroll.innerHTML = Render.sheetContent(item);
