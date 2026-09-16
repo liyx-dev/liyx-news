@@ -250,8 +250,13 @@ function wireQuoteCardEvents(container) {
       authorArea.style.cursor = 'pointer';
       authorArea.addEventListener('click', function (e) {
         e.stopPropagation();
+        showToast('DEBUG: tapped, opening ' + quote.profile_id); // TEMPORARY - remove after diagnosis
         openProfile(quote.profile_id);
       });
+    } else {
+      // TEMPORARY diagnostic - tells us WHY the click wasn't wired,
+      // shown once per card render so it's impossible to miss.
+      console.warn('Profile tap NOT wired for quote', id, 'authorArea found:', !!authorArea, 'profile_id:', quote.profile_id);
     }
 
     const likeBtn = card.querySelector('[data-action="like"]');
@@ -331,12 +336,14 @@ async function openCommentsSheet(targetType, targetId) {
 }
 
 async function openProfile(profileId) {
+  showToast('DEBUG: openProfile called with ' + profileId); // TEMPORARY - remove after diagnosis
   showScreen('profile');
   profileContentEl.innerHTML = Array.from({ length: 2 }, Render.skeletonCard).join('');
   Chronik.pingProfileView(profileId);
 
   try {
     const data = await Chronik.getProfile(profileId);
+    showToast('DEBUG: profile data loaded OK'); // TEMPORARY
     profileContentEl.innerHTML =
       ChronikRender.livingArchiveHeader(data.profile) +
       ChronikRender.livingArchiveBody(data.quotes, data.timeline);
@@ -348,6 +355,7 @@ async function openProfile(profileId) {
       });
     });
   } catch (err) {
+    showToast('DEBUG ERROR: ' + err.message); // TEMPORARY - remove after diagnosis
     profileContentEl.innerHTML = Render.stateMessage(
       'Archive unavailable',
       'Couldn\u2019t load this profile right now. Check your connection and try again.',
