@@ -1,0 +1,155 @@
+/* ============================================================
+   CHRONIK — shares tokens.css/feed.css's design language on
+   purpose (same border/shadow/radius/spacing scale) so Home,
+   News, and Chronik feel like one product wearing one identity,
+   not three skins bolted together.
+============================================================= */
+
+.chronik-badge{
+  display:inline-flex; align-items:center;
+  font-size:9.5px; font-weight:700; letter-spacing:.04em;
+  color:var(--signal); background:var(--signal-soft);
+  padding:2px 7px; border-radius:5px; margin-left:6px;
+  vertical-align:middle;
+}
+
+/* ---- Quote card ---- */
+.quote-card .author-avatar img{ width:100%; height:100%; border-radius:50%; object-fit:cover; }
+.quote-visual{
+  width:100%; aspect-ratio:4/5;
+  border-radius:16px; margin-bottom:var(--sp-3);
+  background-size:cover; background-position:center;
+  background-color:var(--bg-3);
+  display:flex; align-items:center; justify-content:center;
+  padding:var(--sp-5);
+  position:relative;
+  overflow:hidden;
+}
+.quote-visual::before{
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.45));
+}
+.quote-text{
+  position:relative; z-index:1;
+  font-family:var(--serif); font-weight:600; font-style:italic;
+  font-size:22px; line-height:1.4; color:#fff;
+  text-align:center;
+  text-shadow:0 2px 12px rgba(0,0,0,0.3);
+}
+.like-btn.is-liked{ color:var(--signal); }
+.like-btn.is-liked svg{ fill:var(--signal); }
+
+/* ---- Today in History card ---- */
+.history-card{ background:linear-gradient(180deg, var(--bg), var(--bg-2)); }
+.history-kicker{
+  display:flex; align-items:center; gap:7px;
+  font-size:10.5px; font-weight:700; letter-spacing:.06em;
+  color:var(--gold); margin-bottom:var(--sp-3);
+}
+.history-kicker svg{ width:15px; height:15px; }
+.history-linked-profile{
+  font-size:12.5px; font-weight:700; color:var(--signal);
+  margin-bottom:var(--sp-3); display:inline-block;
+}
+.history-linked-profile:hover{ text-decoration:underline; }
+
+/* ---- Living Archive profile page ---- */
+.archive-cover{
+  width:100%; height:180px;
+  background-size:cover; background-position:center;
+  background-color:var(--bg-3);
+  position:relative;
+  border-radius:0 0 24px 24px;
+}
+.archive-avatar{
+  position:absolute; bottom:-36px; left:20px;
+  width:88px; height:88px; border-radius:50%;
+  background:var(--bg-3); border:4px solid var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-weight:700; font-size:32px;
+  overflow:hidden;
+  box-shadow:var(--shadow-card);
+}
+.archive-avatar img{ width:100%; height:100%; object-fit:cover; }
+
+.archive-header-body{ padding:48px 20px 24px; }
+.archive-name{
+  font-family:var(--serif); font-weight:700; font-size:26px;
+  letter-spacing:-0.01em; margin-bottom:4px;
+}
+.archive-era{ font-size:13px; color:var(--sub); font-weight:600; margin-bottom:10px; }
+.archive-tagline{ font-size:15px; color:var(--fg-soft); font-style:italic; margin-bottom:14px; }
+.archive-bio{ font-size:14px; line-height:1.7; color:var(--fg-soft); margin-bottom:16px; }
+.archive-meta-row{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--sub); }
+
+.archive-section{ padding:0 20px var(--sp-6); }
+.archive-section-title{
+  font-family:var(--serif); font-size:18px; font-weight:600;
+  margin-bottom:var(--sp-3);
+  padding-bottom:var(--sp-2);
+  border-bottom:1px solid var(--hair);
+}
+
+/* Timeline — a vertical rail with year markers, this is the
+   literal "history woven into the profile" implementation */
+.archive-timeline{ display:flex; flex-direction:column; gap:0; position:relative; }
+.archive-timeline::before{
+  content:''; position:absolute; left:36px; top:8px; bottom:8px;
+  width:2px; background:var(--hair-strong);
+}
+.archive-timeline-item{
+  display:grid; grid-template-columns:72px 1fr; gap:16px;
+  padding:var(--sp-3) 0; position:relative;
+}
+.archive-timeline-year{
+  font-family:var(--serif); font-weight:700; font-size:15px;
+  color:var(--signal); text-align:right; padding-top:2px;
+  position:relative; z-index:1;
+}
+.archive-timeline-year::after{
+  content:''; position:absolute; right:-20px; top:6px;
+  width:10px; height:10px; border-radius:50%;
+  background:var(--signal); border:2px solid var(--bg);
+}
+.archive-timeline-content h3{ font-size:14.5px; font-weight:700; margin-bottom:4px; }
+.archive-timeline-content p{ font-size:13px; color:var(--sub); line-height:1.55; }
+
+/* Quote grid — Instagram-grid instinct, kept, but with the
+   quote text visible (not just an icon) since that's the point */
+.archive-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+}
+.archive-grid-item{
+  aspect-ratio:1/1; border-radius:12px;
+  background-size:cover; background-position:center;
+  background-color:var(--bg-3);
+  display:flex; align-items:center; justify-content:center;
+  padding:14px;
+  position:relative; overflow:hidden;
+  transition:transform .18s ease;
+}
+.archive-grid-item::before{ content:''; position:absolute; inset:0; background:rgba(0,0,0,0.35); }
+.archive-grid-item p{
+  position:relative; z-index:1; color:#fff;
+  font-family:var(--serif); font-style:italic; font-size:12.5px;
+  line-height:1.4; text-align:center;
+}
+.archive-grid-item:active{ transform:scale(.97); }
+.archive-empty{ font-size:13px; color:var(--sub); grid-column:1/-1; padding:20px 0; text-align:center; }
+
+/* ---- Comments ---- */
+.comment-item{ padding:14px 2px; border-bottom:1px solid var(--hair); }
+.comment-author{ font-size:12.5px; font-weight:700; }
+.comment-text{ font-size:13.5px; color:var(--fg-soft); line-height:1.5; margin:4px 0; }
+.comment-time{ font-size:11px; color:var(--sub-2); }
+.comment-input-row{ display:flex; gap:8px; padding:12px 0; border-top:1px solid var(--hair); }
+.comment-input{
+  flex:1; padding:11px 14px; border-radius:999px;
+  border:1px solid var(--hair-strong); background:var(--bg-2);
+  font-size:13.5px; font-family:inherit; color:var(--fg);
+}
+.comment-input:focus{ outline:none; border-color:var(--signal); }
+.comment-send{
+  padding:11px 18px; border-radius:999px; background:var(--fg);
+  color:var(--bg); font-size:13px; font-weight:700;
+}
