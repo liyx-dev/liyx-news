@@ -31,8 +31,12 @@ export function buildShareLink(story) {
   return SHARE_BASE + story.id;
 }
 
-/** Triggers the native/web share sheet with our own link, and pings the counter. */
-export async function shareStory(story) {
+/** Triggers the native/web share sheet with our own link, and pings the counter.
+ *  navigator.share() is called FIRST and synchronously relative to the
+ *  click that triggered this — Chrome/WebView silently reject the call
+ *  (NotAllowedError, no visible error) if anything else runs first and
+ *  the "trusted user gesture" window has expired by the time it fires. */
+export function shareStory(story) {
   const url = buildShareLink(story);
   const shareData = {
     title: story.title,
@@ -40,14 +44,16 @@ export async function shareStory(story) {
     url,
   };
 
-  pingShare(story); // fire and forget, never blocks the share UI
-
   if (navigator.share) {
-    try { await navigator.share(shareData); return 'native'; }
-    catch (e) { /* user cancelled — not an error */ return 'cancelled'; }
+    return navigator.share(shareData)
+      .then(() => { pingShare(story); return 'native'; })
+      .catch(() => 'cancelled'); // user cancelled — not an error, don't ping
   }
-  await navigator.clipboard?.writeText(url);
-  return 'copied';
+
+  return navigator.clipboard?.writeText(url).then(() => {
+    pingShare(story);
+    return 'copied';
+  }) ?? Promise.resolve('unsupported');
 }
 
 /**
