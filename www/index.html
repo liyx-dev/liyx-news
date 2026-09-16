@@ -3,31 +3,19 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-<title>LIYX — World News, Live</title>
-<meta name="description" content="LIYX is a live world news feed — global headlines, local stories, and faith & motivation, scoped to where you are." />
+<title>Chronik — News, Heroes & History</title>
+<meta name="description" content="Chronik: live world news, heroes' quotes, and today in history — all in one place. No sign-up, always current." />
 <meta name="theme-color" content="#FFFFFF" />
 
-<!-- ============================================================
-     Open Graph / Twitter Card — used whenever a page (including
-     a shared /go/:id story page) is linked elsewhere, so a
-     preview image + description actually renders on WhatsApp,
-     X, Facebook, iMessage, etc. instead of a bare link.
-     NOTE: these are the site-level defaults. The /go/:id share
-     page itself is a client-side route (no server), so social
-     crawlers that don't execute JS will see these defaults
-     rather than the specific story's image — swapping in true
-     per-story OG tags requires a tiny server-rendered endpoint
-     later; documented in docs/04-OG-IMAGE-NOTE.md.
-============================================================= -->
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LIYX">
-<meta property="og:title" content="LIYX — World News, Live">
-<meta property="og:description" content="Live global headlines, local stories, and faith & motivation news — no sign-up, always current.">
+<meta property="og:site_name" content="Chronik">
+<meta property="og:title" content="Chronik — News, Heroes & History">
+<meta property="og:description" content="Live world news, heroes' quotes, and today in history — no sign-up, always current.">
 <meta property="og:image" content="https://news.liyogworld.com.ng/og-cover.png">
 <meta property="og:url" content="https://news.liyogworld.com.ng/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="LIYX — World News, Live">
-<meta name="twitter:description" content="Live global headlines, local stories, and faith & motivation news — no sign-up, always current.">
+<meta name="twitter:title" content="Chronik — News, Heroes & History">
+<meta name="twitter:description" content="Live world news, heroes' quotes, and today in history — no sign-up, always current.">
 <meta name="twitter:image" content="https://news.liyogworld.com.ng/og-cover.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,18 +27,19 @@
 <link rel="stylesheet" href="css/feed.css">
 <link rel="stylesheet" href="css/sheet.css">
 <link rel="stylesheet" href="css/ads.css">
+<link rel="stylesheet" href="css/chronik.css">
 </head>
 <body data-theme="light">
 
 <header class="masthead">
   <div class="masthead-top">
     <div class="brand">
-      <span class="brand-mark">LIY<em>X</em></span>
-      <span class="brand-tag">World, live</span>
+      <span class="brand-mark">Chronik</span>
+      <span class="brand-tag" id="screenLabel">Home</span>
     </div>
     <div class="head-controls">
       <div class="live-pulse"><span class="pulse-dot"></span><span>LIVE</span></div>
-      <button class="icon-btn" id="refreshBtn" title="Refresh feed" aria-label="Refresh feed">
+      <button class="icon-btn" id="refreshBtn" title="Refresh" aria-label="Refresh current screen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
       </button>
       <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
@@ -58,36 +47,58 @@
       </button>
     </div>
   </div>
-  <nav class="rail" id="rail" aria-label="Categories"></nav>
+  <!-- News-only controls (category rail + location) — hidden on Home/Chronik/You -->
+  <nav class="rail" id="rail" aria-label="News categories"></nav>
   <div class="location-strip" id="locationStrip"></div>
+  <!-- Chronik-only controls (quote category filter) -->
+  <nav class="rail" id="chronikRail" aria-label="Chronik categories" style="display:none;"></nav>
 </header>
 
 <div class="ticker-wrap" id="tickerWrap"><div class="ticker-track" id="tickerTrack"></div></div>
 
-<main class="wrap">
+<!-- ============================================================
+     Three full screens, one visible at a time, toggled by
+     main.js's tab router. Each is a real landmark region with
+     its own aria-label, per docs/06-ACCESSIBILITY.md, so screen
+     reader users can jump straight to the section they want.
+============================================================= -->
+
+<main class="wrap screen" id="screen-home" aria-label="Home — today's highlights">
+  <div class="feed" id="homeFeed"></div>
+</main>
+
+<main class="wrap screen" id="screen-news" aria-label="News feed" style="display:none;">
   <div class="feed" id="feed"></div>
   <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
     <button class="load-more" id="loadMoreBtn">Show more stories</button>
   </div>
 </main>
 
-<footer class="site-footer">
-  <div class="footer-brand">LIY<em>X</em></div>
-  <p>Independent live news, curated the moment it happens.</p>
-  <p class="footer-tag">Built by Liyog Bartoos O.</p>
+<main class="wrap screen" id="screen-chronik" aria-label="Chronik — Heroes, Quotes, and History" style="display:none;">
+  <div class="feed" id="chronikFeed"></div>
+</main>
+
+<main class="wrap screen" id="screen-profile" aria-label="Living archive profile" style="display:none;">
+  <div id="profileContent"></div>
+</main>
+
+<footer class="site-footer" id="siteFooter">
+  <div class="footer-brand">Chronik</div>
+  <p>Independent live news, heroes, and history — curated as it happens.</p>
+  <p class="footer-tag">Built by Liyog Bartoos O. · Powered by LiyX Intelligence</p>
 </footer>
 
-<nav class="tabbar">
-  <button class="tab-btn active" data-tab="feed">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Feed
+<nav class="tabbar" aria-label="Main navigation">
+  <button class="tab-btn active" data-tab="home" aria-label="Home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Home
   </button>
-  <button class="tab-btn" data-tab="search">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search
+  <button class="tab-btn" data-tab="news" aria-label="News feed">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>News
   </button>
-  <button class="tab-btn" data-tab="categories">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Categories
+  <button class="tab-btn" data-tab="chronik" aria-label="Chronik — heroes, quotes, and history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>Chronik
   </button>
-  <button class="tab-btn" data-tab="you">
+  <button class="tab-btn" data-tab="you" aria-label="Your settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>You
   </button>
 </nav>
