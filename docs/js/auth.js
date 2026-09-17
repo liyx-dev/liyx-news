@@ -50,23 +50,18 @@ export async function handleGoogleCredential(response) {
 
 export async function restoreSession() {
   const token = getSessionToken();
-  window.__chronikDebugToast && window.__chronikDebugToast('DEBUG: token in storage = ' + (token ? token.slice(0, 8) + '...' : 'NONE'));
   if (!token) return null;
 
   try {
     const res = await fetch(CHRONIK_API_BASE + '/auth/me', {
       headers: { 'x-chronik-session': token },
     });
-    window.__chronikDebugToast && window.__chronikDebugToast('DEBUG: /auth/me status = ' + res.status);
     const data = await res.json();
-    window.__chronikDebugToast && window.__chronikDebugToast('DEBUG: signed_in = ' + data.signed_in);
     if (data.signed_in) {
       currentProfile = data.profile;
       return currentProfile;
     }
-  } catch (e) {
-    window.__chronikDebugToast && window.__chronikDebugToast('DEBUG ERROR: ' + e.message);
-  }
+  } catch (e) { /* offline - stay signed out locally until reachable */ }
 
   setSessionToken(null);
   currentProfile = null;
