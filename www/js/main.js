@@ -67,6 +67,22 @@ function showToast(msg) {
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
 }
 
+// TEMPORARY diagnostic overlay - stacks messages and stays on
+// screen (unlike the auto-hiding toast) so a sequence of debug
+// steps can actually be read on a phone, one after another,
+// without racing against a timeout. Remove once auth is confirmed
+// fully working end-to-end.
+window.__chronikDebugToast = function (msg) {
+  let box = document.getElementById('chronikDebugBox');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'chronikDebugBox';
+    box.style.cssText = 'position:fixed;bottom:100px;left:10px;right:10px;background:#111;color:#0f0;font-family:monospace;font-size:11px;padding:10px;border-radius:8px;z-index:9999;max-height:200px;overflow-y:auto;white-space:pre-wrap;';
+    document.body.appendChild(box);
+  }
+  box.textContent += msg + '\n';
+};
+
 const SCREENS = {
   home:    { el: document.getElementById('screen-home'),    label: 'Home' },
   news:    { el: document.getElementById('screen-news'),    label: 'News' },
@@ -595,8 +611,10 @@ document.getElementById('profileBackBtn').addEventListener('click', function () 
 
 function updateYouTabIcon() {
   const iconSlot = document.querySelector('#youTabBtn .you-tab-icon');
+  window.__chronikDebugToast && window.__chronikDebugToast('DEBUG: updateYouTabIcon called, iconSlot found = ' + !!iconSlot);
   if (!iconSlot) return;
   const profile = Auth.getCurrentProfile();
+  window.__chronikDebugToast && window.__chronikDebugToast('DEBUG: profile = ' + (profile ? profile.display_name : 'null'));
   if (profile) {
     iconSlot.innerHTML = profile.avatar_image_url
       ? '<img src="' + profile.avatar_image_url + '" alt="" class="you-tab-avatar">'
