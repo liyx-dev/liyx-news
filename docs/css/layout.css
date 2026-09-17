@@ -123,6 +123,18 @@
 .tab-btn.active{ color:var(--signal); }
 .tab-btn:active svg{ transform:scale(.88); }
 
+.you-tab-icon{ display:flex; align-items:center; justify-content:center; }
+.you-tab-avatar{
+  width:21px; height:21px; border-radius:50%;
+  object-fit:cover; display:block;
+}
+.you-tab-avatar-initial{
+  display:flex; align-items:center; justify-content:center;
+  background:var(--fg); color:var(--bg);
+  font-family:var(--serif); font-weight:700; font-size:11px;
+}
+.tab-btn.active .you-tab-avatar{ box-shadow:0 0 0 2px var(--signal); }
+
 /* Screens — one visible at a time, controlled by main.js */
 .screen{ animation:screenIn .25s ease; }
 @keyframes screenIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
