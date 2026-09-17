@@ -593,13 +593,40 @@ document.getElementById('profileBackBtn').addEventListener('click', function () 
   showScreen('chronik');
 });
 
+function updateYouTabIcon() {
+  const iconSlot = document.querySelector('#youTabBtn .you-tab-icon');
+  if (!iconSlot) return;
+  const profile = Auth.getCurrentProfile();
+  if (profile) {
+    iconSlot.innerHTML = profile.avatar_image_url
+      ? '<img src="' + profile.avatar_image_url + '" alt="" class="you-tab-avatar">'
+      : '<span class="you-tab-avatar you-tab-avatar-initial">' + (profile.display_name || '?')[0] + '</span>';
+  } else {
+    iconSlot.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>';
+  }
+}
+
 function openYouSheet() {
   const theme = document.body.getAttribute('data-theme');
   const signedIn = Auth.isSignedIn();
   const profile = Auth.getCurrentProfile();
 
+  // A real identity card - avatar, name, email - not just a
+  // generic "Signed in" line. This is what actually answers
+  // "which of my accounts is active in Chronik right now,"
+  // independent of whatever Google account Chrome happens to
+  // have selected for its OWN account picker prompt.
   const accountSection = signedIn
-    ? '<div class="you-row"><span>Signed in as ' + (profile.display_name || 'You') + '</span><button class="you-action" id="youSignOut">Sign out</button></div>'
+    ? '<div class="you-identity">' +
+        '<div class="you-identity-avatar">' +
+          (profile.avatar_image_url ? '<img src="' + profile.avatar_image_url + '" alt="">' : (profile.display_name || '?')[0]) +
+        '</div>' +
+        '<div class="you-identity-info">' +
+          '<span class="you-identity-name">' + (profile.display_name || 'You') + '</span>' +
+          '<span class="you-identity-email">' + (profile.email || '') + '</span>' +
+        '</div>' +
+        '<button class="you-action" id="youSignOut">Sign out</button>' +
+      '</div>'
     : '<div class="you-signin"><p>Sign in to like, comment, and post as yourself across Chronik.</p><div id="googleSignInBtn"></div></div>';
 
   sheetScroll.innerHTML =
@@ -625,6 +652,7 @@ function openYouSheet() {
   const signOutBtn = document.getElementById('youSignOut');
   if (signOutBtn) signOutBtn.addEventListener('click', async function () {
     await Auth.signOut();
+    updateYouTabIcon();
     showToast('Signed out');
     openYouSheet(); // refresh the sheet to show the sign-in button again
   });
@@ -697,6 +725,7 @@ async function boot() {
 
   Chronik.startEngagementFlushLoop();
   await Auth.restoreSession();
+  updateYouTabIcon();
 
   await Ads.initAds();
   Ads.showBanner();
