@@ -127,3 +127,96 @@
 .you-identity-name{ font-size:14.5px; font-weight:700; }
 .you-identity-email{ font-size:12px; color:var(--sub); }
 .you-about{ font-size:12px; color:var(--sub-2); line-height:1.6; padding-top:18px; }
+.you-signin-note{ font-size:13px; color:var(--sub); padding:8px 0; }
+
+/* ============================================================
+   COMPOSE SHEET - Quote / Post creation
+============================================================= */
+.compose-toggle{
+  display:flex; gap:4px; padding:4px; margin-bottom:18px;
+  background:var(--bg-2); border-radius:999px;
+}
+.compose-toggle-btn{
+  flex:1; padding:10px; border-radius:999px;
+  font-size:13.5px; font-weight:700; color:var(--sub);
+  transition:all .18s ease;
+}
+.compose-toggle-btn.active{ background:var(--fg); color:var(--bg); }
+
+.compose-author{ display:flex; gap:12px; margin-bottom:14px; }
+.compose-avatar{
+  width:40px; height:40px; border-radius:50%; flex-shrink:0;
+  background:var(--fg); color:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-weight:700; font-size:16px;
+  overflow:hidden;
+}
+.compose-avatar img{ width:100%; height:100%; object-fit:cover; }
+
+.compose-textarea{
+  flex:1; border:none; background:none; resize:none;
+  font-size:16px; font-family:inherit; color:var(--fg);
+  line-height:1.5; padding-top:8px;
+}
+.compose-textarea:focus{ outline:none; }
+.compose-textarea-quote{
+  width:100%; border:1px solid var(--hair-strong); border-radius:12px;
+  padding:14px; background:var(--bg-2); margin-bottom:14px;
+  font-family:var(--serif); font-style:italic; font-size:17px;
+}
+
+.compose-image-preview{ position:relative; margin-bottom:14px; border-radius:14px; overflow:hidden; }
+.compose-image-preview img{ width:100%; max-height:260px; object-fit:cover; display:block; }
+.compose-image-remove{
+  position:absolute; top:8px; right:8px;
+  width:28px; height:28px; border-radius:50%;
+  background:rgba(0,0,0,0.6); color:#fff; font-size:18px; line-height:1;
+}
+
+.compose-actions-row{ display:flex; align-items:center; justify-content:space-between; padding-top:6px; }
+.compose-icon-btn{
+  width:38px; height:38px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--signal); border:1px solid var(--hair);
+  cursor:pointer;
+}
+.compose-icon-btn svg{ width:19px; height:19px; }
+.compose-submit{
+  padding:10px 24px; border-radius:999px; background:var(--signal);
+  color:#fff; font-size:14px; font-weight:700;
+  transition:opacity .15s ease;
+}
+.compose-submit:disabled{ opacity:.6; }
+.compose-submit-full{ width:100%; padding:14px; margin-top:16px; }
+.compose-status{ font-size:12.5px; color:var(--sub); margin-top:10px; min-height:16px; }
+
+.compose-align-row{ display:flex; gap:6px; margin-bottom:14px; }
+.compose-align-btn{
+  flex:1; padding:9px; border-radius:10px; border:1px solid var(--hair-strong);
+  font-size:12.5px; font-weight:600; color:var(--sub);
+}
+.compose-align-btn.active{ background:var(--fg); color:var(--bg); border-color:var(--fg); }
+
+.compose-preview-canvas{
+  width:100%; max-width:280px; aspect-ratio:4/5;
+  display:block; margin:0 auto 18px; border-radius:16px;
+  box-shadow:var(--shadow-card);
+}
+
+.compose-section-label{
+  font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--sub-2); margin:16px 0 8px;
+}
+.compose-upload-bg{
+  display:block; text-align:center; padding:12px;
+  border:1.5px dashed var(--hair-strong); border-radius:12px;
+  font-size:13px; font-weight:600; color:var(--signal);
+  cursor:pointer;
+}
+.compose-bg-grid{ display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; }
+.compose-bg-tile{
+  aspect-ratio:1/1; border-radius:10px; background-size:cover; background-position:center;
+  border:2px solid transparent; transition:border-color .15s ease;
+}
+.compose-bg-tile:active{ border-color:var(--signal); }
+.compose-loading{ text-align:center; padding:40px 0; color:var(--sub); font-size:13px; }
