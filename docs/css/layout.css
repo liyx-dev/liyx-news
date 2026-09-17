@@ -135,6 +135,18 @@
 }
 .tab-btn.active .you-tab-avatar{ box-shadow:0 0 0 2px var(--signal); }
 
+.fab-compose{
+  position:fixed; right:20px; bottom:88px; z-index:55;
+  width:56px; height:56px; border-radius:50%;
+  background:var(--signal); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 6px 20px -4px rgba(232,68,44,0.5), 0 2px 8px rgba(0,0,0,0.15);
+  transition:transform .15s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease;
+}
+.fab-compose svg{ width:24px; height:24px; }
+.fab-compose:active{ transform:scale(.92); }
+.fab-compose:hover{ box-shadow:0 8px 24px -4px rgba(232,68,44,0.6), 0 2px 8px rgba(0,0,0,0.15); }
+
 /* Screens — one visible at a time, controlled by main.js */
 .screen{ animation:screenIn .25s ease; }
 @keyframes screenIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
