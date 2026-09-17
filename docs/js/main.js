@@ -24,6 +24,7 @@ import * as Ads from './ads.js';
 import * as Chronik from './chronik.js';
 import * as ChronikRender from './chronik-render.js';
 import * as Auth from './auth.js';
+import * as Compose from './compose.js';
 
 const scrim = document.getElementById('scrim');
 const sheet = document.getElementById('sheet');
@@ -591,6 +592,21 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
 
 document.getElementById('profileBackBtn').addEventListener('click', function () {
   showScreen('chronik');
+});
+
+document.getElementById('fabCompose').addEventListener('click', function () {
+  sheetScroll.innerHTML = '';
+  Compose.renderComposeSheet(sheetScroll, function () {
+    closeSheet();
+    // Refresh whichever screen the person is likely to see their
+    // new content on, so it doesn't feel like it vanished.
+    if (activeScreen === 'chronik') loadChronikFeed();
+    else if (activeScreen === 'home') loadHomeFeed();
+    showToast('Shared to Chronik');
+  });
+  scrim.classList.add('open');
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
 });
 
 function updateYouTabIcon() {
