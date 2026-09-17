@@ -111,4 +111,19 @@
   padding:16px 2px; border-bottom:1px solid var(--hair);
 }
 .you-signin p{ font-size:13px; color:var(--sub); margin-bottom:14px; line-height:1.5; }
+.you-identity{
+  display:flex; align-items:center; gap:12px;
+  padding:16px 2px; border-bottom:1px solid var(--hair);
+}
+.you-identity-avatar{
+  width:44px; height:44px; border-radius:50%;
+  background:var(--fg); color:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-weight:700; font-size:18px;
+  flex-shrink:0; overflow:hidden;
+}
+.you-identity-avatar img{ width:100%; height:100%; object-fit:cover; }
+.you-identity-info{ display:flex; flex-direction:column; flex:1; min-width:0; }
+.you-identity-name{ font-size:14.5px; font-weight:700; }
+.you-identity-email{ font-size:12px; color:var(--sub); }
 .you-about{ font-size:12px; color:var(--sub-2); line-height:1.6; padding-top:18px; }
