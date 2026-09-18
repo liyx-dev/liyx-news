@@ -130,6 +130,69 @@
 .you-signin-note{ font-size:13px; color:var(--sub); padding:8px 0; }
 
 /* ============================================================
+   ADMIN PANEL
+============================================================= */
+.admin-panel{ padding-bottom:20px; }
+.admin-title{ font-family:var(--serif); font-size:22px; font-weight:700; margin-bottom:16px; }
+.admin-tabs{ display:flex; gap:6px; overflow-x:auto; margin-bottom:20px; padding-bottom:4px; }
+.admin-tab-btn{
+  flex-shrink:0; padding:9px 16px; border-radius:999px;
+  font-size:13px; font-weight:700; color:var(--sub);
+  border:1px solid var(--hair-strong);
+}
+.admin-tab-btn.active{ background:var(--fg); color:var(--bg); border-color:var(--fg); }
+
+.admin-block{ margin-bottom:28px; padding-bottom:24px; border-bottom:1px solid var(--hair); }
+.admin-block:last-child{ border-bottom:none; }
+.admin-block-title{ font-family:var(--serif); font-size:16px; font-weight:700; margin-bottom:12px; }
+.admin-note{ font-size:12.5px; color:var(--sub); line-height:1.5; margin-bottom:12px; }
+.admin-loading, .admin-empty{ font-size:13px; color:var(--sub); text-align:center; padding:24px 0; }
+.admin-error{ font-size:13px; color:var(--signal); text-align:center; padding:24px 0; }
+
+.admin-input{
+  width:100%; padding:12px 14px; margin-bottom:10px;
+  border:1px solid var(--hair-strong); border-radius:10px;
+  background:var(--bg-2); color:var(--fg);
+  font-size:14px; font-family:inherit;
+}
+.admin-input:focus{ outline:none; border-color:var(--signal); }
+.admin-input-row{ display:flex; gap:8px; }
+.admin-input-small{ flex:1; }
+.admin-textarea{ resize:vertical; line-height:1.5; }
+.admin-file-input{ margin-bottom:4px; }
+.admin-file-label{ display:block; font-size:11.5px; color:var(--sub); margin-bottom:12px; }
+.admin-checkbox-row{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--sub); margin-bottom:14px; }
+
+.admin-submit{
+  width:100%; padding:13px; border-radius:10px; background:var(--signal);
+  color:#fff; font-size:14px; font-weight:700;
+}
+.admin-status{ font-size:12.5px; color:var(--sub); margin-top:10px; min-height:16px; }
+
+.admin-list{ display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; margin-bottom:4px; }
+.admin-list-item{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px; border-radius:10px; background:var(--bg-2);
+}
+.admin-list-item-info{ display:flex; flex-direction:column; min-width:0; }
+.admin-list-item-info strong{ font-size:13.5px; }
+.admin-list-item-info span{ font-size:11.5px; color:var(--sub); }
+.admin-feature-btn{
+  flex-shrink:0; padding:7px 14px; border-radius:999px;
+  font-size:11.5px; font-weight:700; background:var(--fg); color:var(--bg);
+}
+.admin-feature-btn[disabled]{ opacity:.45; }
+
+.admin-mode-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+.admin-mode-btn{
+  padding:14px; border-radius:12px; border:1.5px solid var(--hair-strong);
+  text-align:left; display:flex; flex-direction:column; gap:4px;
+}
+.admin-mode-btn strong{ font-size:13px; }
+.admin-mode-btn span{ font-size:11px; color:var(--sub); line-height:1.4; }
+.admin-mode-btn.active{ border-color:var(--signal); background:var(--signal-soft); }
+
+/* ============================================================
    COMPOSE SHEET - Quote / Post creation
 ============================================================= */
 .compose-toggle{
