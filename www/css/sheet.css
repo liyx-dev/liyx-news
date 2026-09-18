@@ -218,5 +218,26 @@
   aspect-ratio:1/1; border-radius:10px; background-size:cover; background-position:center;
   border:2px solid transparent; transition:border-color .15s ease;
 }
-.compose-bg-tile:active{ border-color:var(--signal); }
+.compose-bg-tile.active{ border-color:var(--signal); }
+.compose-bg-tile:active{ transform:scale(.95); }
 .compose-loading{ text-align:center; padding:40px 0; color:var(--sub); font-size:13px; }
+
+.compose-category-row, .compose-font-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+.compose-category-btn{
+  padding:8px 14px; border-radius:999px; border:1px solid var(--hair-strong);
+  font-size:12.5px; font-weight:600; color:var(--sub);
+}
+.compose-category-btn.active{ background:var(--fg); color:var(--bg); border-color:var(--fg); }
+
+.compose-font-btn{
+  padding:10px 16px; border-radius:10px; border:1px solid var(--hair-strong);
+  font-size:14px; color:var(--fg);
+}
+.compose-font-btn.active{ border-color:var(--signal); background:var(--signal-soft); color:var(--signal); }
+
+.compose-color-row{ display:flex; gap:10px; margin-bottom:6px; }
+.compose-color-dot{
+  width:32px; height:32px; border-radius:50%;
+  border:2px solid var(--hair-strong);
+}
+.compose-color-dot.active{ border-color:var(--signal); box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--signal); }
