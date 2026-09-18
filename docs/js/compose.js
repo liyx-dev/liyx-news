@@ -1,15 +1,14 @@
 // ============================================================
-// COMPOSE.JS - the "+" button experience: choose Quote or Post,
-// compose it, submit. Deliberately X.com-simple on the surface
-// even though real functionality sits behind it - background
-// picking, alignment, color, compression, moderation.
+// COMPOSE.JS - the "+" button experience: choose Quote or Post.
+// Quotes now use ONLY curated backgrounds + solid colors (no
+// custom photo upload for quotes, per decision). Posts still
+// accept any single photo, moderated but never styled.
 // ============================================================
 
-import { Store } from './store.js';
 import { CHRONIK_API_BASE } from './sources.js';
 import { authHeaders, isSignedIn, getCurrentProfile } from './auth.js';
 import { compressImageFile, validateImageFile } from './image-compress.js';
-import { composeQuoteImage, downloadBlob, shareBlob } from './quote-composer.js';
+import { downloadBlob } from './quote-composer.js';
 
 let cachedBackgrounds = null;
 
@@ -21,11 +20,22 @@ async function fetchBackgrounds() {
   return cachedBackgrounds;
 }
 
-const GRADIENT_PRESETS = [
-  ['#E8442C', '#C6371F'], ['#1a2a6c', '#b21f1f'], ['#0f2027', '#2c5364'],
-  ['#134E5E', '#71B280'], ['#8E2DE2', '#4A00E0'], ['#F7971E', '#FFD200'],
+const QUOTE_CATEGORIES = ['Motivation', 'Faith', 'Leadership', 'Love', 'Resilience', 'Wisdom', 'Success', 'Gratitude'];
+
+const SOLID_PRESETS = [
+  { name: 'Ink', color: '#14151A' },
+  { name: 'Signal', color: '#E8442C' },
+  { name: 'Forest', color: '#1F5C3F' },
+  { name: 'Ocean', color: '#1B3A6B' },
+  { name: 'Plum', color: '#5B2A7A' },
+  { name: 'White', color: '#FFFFFF' },
 ];
-const SOLID_PRESETS = ['#14151A', '#E8442C', '#1F5C3F', '#2A3B8F', '#7A1FA2'];
+
+const FONT_OPTIONS = [
+  { name: 'Classic', family: 'Georgia, serif', style: 'italic 700' },
+  { name: 'Bold', family: '"Space Grotesk", sans-serif', style: '700' },
+  { name: 'Elegant', family: '"Fraunces", Georgia, serif', style: '600' },
+];
 
 export function renderComposeSheet(container, onDone) {
   if (!isSignedIn()) {
@@ -89,8 +99,7 @@ function renderPostComposer(body, onDone) {
     if (err) { setStatus(err); return; }
     selectedFile = file;
     const preview = document.getElementById('postImagePreview');
-    const previewImg = document.getElementById('postImagePreviewImg');
-    previewImg.src = URL.createObjectURL(file);
+    document.getElementById('postImagePreviewImg').src = URL.createObjectURL(file);
     preview.style.display = 'block';
   });
 
@@ -115,13 +124,13 @@ function renderPostComposer(body, onDone) {
     try {
       let imageUrl = null;
       if (selectedFile) {
-        setStatus('Compressing image…');
+        setStatus('Preparing your photo…');
         const compressed = await compressImageFile(selectedFile);
         setStatus('Uploading…');
         imageUrl = await uploadImage(compressed, 'post');
       }
 
-      setStatus('Checking content…');
+      setStatus('Publishing…');
       const res = await fetch(CHRONIK_API_BASE + '/posts', {
         method: 'POST',
         headers: Object.assign({ 'content-type': 'application/json' }, authHeaders()),
@@ -130,7 +139,7 @@ function renderPostComposer(body, onDone) {
       const data = await res.json();
 
       if (!res.ok) {
-        setStatus(data.error || 'Could not post. Please try again.');
+        setStatus(friendlyError(data.error));
         submitBtn.disabled = false;
         submitBtn.textContent = 'Post';
         return;
@@ -139,7 +148,7 @@ function renderPostComposer(body, onDone) {
       setStatus('Posted!');
       setTimeout(function () { onDone && onDone(); }, 500);
     } catch (err) {
-      setStatus('Something went wrong: ' + err.message);
+      setStatus('Something went wrong. Please try again.');
       submitBtn.disabled = false;
       submitBtn.textContent = 'Post';
     }
@@ -150,39 +159,53 @@ function renderQuoteComposer(body, onDone) {
   body.innerHTML = '<div class="compose-quote"><p class="compose-loading">Loading backgrounds…</p></div>';
 
   fetchBackgrounds().then(function (backgrounds) {
-    let selectedBg = { type: 'gradient', value: GRADIENT_PRESETS[0] };
+    let selectedBg = backgrounds.length
+      ? { type: 'image', value: backgrounds[0].image_url, backgroundId: backgrounds[0].id }
+      : { type: 'solid', value: SOLID_PRESETS[0].color };
     let align = 'center';
     let textColor = '#FFFFFF';
-    let customFile = null;
+    let fontIndex = 0;
+    let category = QUOTE_CATEGORIES[0];
 
     const bgTilesHtml = backgrounds.map(function (bg, i) {
-      return '<button class="compose-bg-tile" data-bg-index="' + i + '" style="background-image:url(\'' + bg.image_url + '\')"></button>';
-    }).join('');
-
-    const gradientTilesHtml = GRADIENT_PRESETS.map(function (g, i) {
-      return '<button class="compose-bg-tile" data-gradient-index="' + i + '" style="background:linear-gradient(135deg,' + g[0] + ',' + g[1] + ')"></button>';
+      return '<button class="compose-bg-tile' + (i === 0 ? ' active' : '') + '" data-bg-index="' + i + '" style="background-image:url(\'' + bg.image_url + '\')"></button>';
     }).join('');
 
     const solidTilesHtml = SOLID_PRESETS.map(function (c, i) {
-      return '<button class="compose-bg-tile" data-solid-index="' + i + '" style="background:' + c + '"></button>';
+      const borderStyle = c.color === '#FFFFFF' ? 'border:1px solid var(--hair-strong);' : '';
+      return '<button class="compose-bg-tile" data-solid-index="' + i + '" style="background:' + c.color + ';' + borderStyle + '" title="' + c.name + '"></button>';
+    }).join('');
+
+    const fontTilesHtml = FONT_OPTIONS.map(function (f, i) {
+      return '<button class="compose-font-btn' + (i === 0 ? ' active' : '') + '" data-font-index="' + i + '" style="font-family:' + f.family + '">' + f.name + '</button>';
+    }).join('');
+
+    const categoryTilesHtml = QUOTE_CATEGORIES.map(function (c) {
+      return '<button class="compose-category-btn' + (c === category ? ' active' : '') + '" data-category="' + c + '">' + c + '</button>';
+    }).join('');
+
+    const colorDotsHtml = ['#FFFFFF', '#14151A', '#E8442C', '#FFD700'].map(function (c) {
+      return '<button class="compose-color-dot' + (c === textColor ? ' active' : '') + '" data-color="' + c + '" style="background:' + c + '"></button>';
     }).join('');
 
     body.innerHTML =
       '<div class="compose-quote">' +
+      '<canvas id="quotePreviewCanvas" class="compose-preview-canvas"></canvas>' +
       '<textarea id="quoteText" class="compose-textarea compose-textarea-quote" placeholder="Write your quote…" maxlength="280" rows="3"></textarea>' +
+      '<p class="compose-section-label">Category</p>' +
+      '<div class="compose-category-row">' + categoryTilesHtml + '</div>' +
+      '<p class="compose-section-label">Style</p>' +
+      '<div class="compose-font-row">' + fontTilesHtml + '</div>' +
+      '<p class="compose-section-label">Alignment</p>' +
       '<div class="compose-align-row">' +
       '<button class="compose-align-btn" data-align="left">Left</button>' +
       '<button class="compose-align-btn active" data-align="center">Center</button>' +
       '<button class="compose-align-btn" data-align="right">Right</button>' +
       '</div>' +
-      '<canvas id="quotePreviewCanvas" class="compose-preview-canvas"></canvas>' +
-      '<p class="compose-section-label">Your own photo</p>' +
-      '<label class="compose-upload-bg" for="quoteBgUpload">Upload a background photo</label>' +
-      '<input type="file" id="quoteBgUpload" accept="image/*" style="display:none;">' +
+      '<p class="compose-section-label">Text color</p>' +
+      '<div class="compose-color-row">' + colorDotsHtml + '</div>' +
       '<p class="compose-section-label">Backgrounds</p>' +
       '<div class="compose-bg-grid">' + bgTilesHtml + '</div>' +
-      '<p class="compose-section-label">Gradients</p>' +
-      '<div class="compose-bg-grid">' + gradientTilesHtml + '</div>' +
       '<p class="compose-section-label">Solid colors</p>' +
       '<div class="compose-bg-grid">' + solidTilesHtml + '</div>' +
       '<button class="compose-submit compose-submit-full" id="quoteSubmit">Share Quote</button>' +
@@ -194,37 +217,43 @@ function renderQuoteComposer(body, onDone) {
     canvas.width = 320;
     canvas.height = 400;
 
+    let bgImageCache = null;
+    let bgImageCacheUrl = null;
+
     async function redrawPreview() {
       const text = document.getElementById('quoteText').value || 'Your quote appears here';
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (selectedBg.type === 'gradient') {
-        const g = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        g.addColorStop(0, selectedBg.value[0]);
-        g.addColorStop(1, selectedBg.value[1]);
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      } else if (selectedBg.type === 'solid') {
+      if (selectedBg.type === 'solid') {
         ctx.fillStyle = selectedBg.value;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else if (selectedBg.type === 'image') {
         try {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          await new Promise(function (resolve, reject) { img.onload = resolve; img.onerror = reject; img.src = selectedBg.value; });
+          if (bgImageCacheUrl !== selectedBg.value) {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            await new Promise(function (resolve, reject) { img.onload = resolve; img.onerror = reject; img.src = selectedBg.value; });
+            bgImageCache = img;
+            bgImageCacheUrl = selectedBg.value;
+          }
+          const img = bgImageCache;
           const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
           const w = img.width * scale, h = img.height * scale;
           ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
-          ctx.fillStyle = 'rgba(0,0,0,0.32)';
+          ctx.fillStyle = 'rgba(0,0,0,0.30)';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
-        } catch (e) { ctx.fillStyle = '#14151A'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        } catch (e) {
+          ctx.fillStyle = '#14151A';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
       }
 
-      ctx.font = 'italic 700 20px Georgia, serif';
+      const font = FONT_OPTIONS[fontIndex];
+      ctx.font = font.style + ' 22px ' + font.family;
       ctx.fillStyle = textColor;
       ctx.textAlign = align;
-      const x = align === 'left' ? 20 : align === 'right' ? canvas.width - 20 : canvas.width / 2;
-      wrapAndDraw(ctx, text, x, canvas.height / 2, canvas.width - 40, 26);
+      const x = align === 'left' ? 24 : align === 'right' ? canvas.width - 24 : canvas.width / 2;
+      wrapAndDraw(ctx, text, x, canvas.height / 2, canvas.width - 48, 30);
     }
 
     function wrapAndDraw(ctx2, text, x, centerY, maxWidth, lineHeight) {
@@ -252,34 +281,48 @@ function renderQuoteComposer(body, onDone) {
       });
     });
 
+    body.querySelectorAll('.compose-font-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        body.querySelectorAll('.compose-font-btn').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        fontIndex = parseInt(btn.dataset.fontIndex, 10);
+        redrawPreview();
+      });
+    });
+
+    body.querySelectorAll('.compose-category-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        body.querySelectorAll('.compose-category-btn').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        category = btn.dataset.category;
+      });
+    });
+
+    body.querySelectorAll('.compose-color-dot').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        body.querySelectorAll('.compose-color-dot').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        textColor = btn.dataset.color;
+        redrawPreview();
+      });
+    });
+
     body.querySelectorAll('[data-bg-index]').forEach(function (btn) {
       btn.addEventListener('click', function () {
+        body.querySelectorAll('.compose-bg-tile').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
         const idx = parseInt(btn.dataset.bgIndex, 10);
         selectedBg = { type: 'image', value: backgrounds[idx].image_url, backgroundId: backgrounds[idx].id };
         redrawPreview();
       });
     });
-    body.querySelectorAll('[data-gradient-index]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        selectedBg = { type: 'gradient', value: GRADIENT_PRESETS[parseInt(btn.dataset.gradientIndex, 10)] };
-        redrawPreview();
-      });
-    });
     body.querySelectorAll('[data-solid-index]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        selectedBg = { type: 'solid', value: SOLID_PRESETS[parseInt(btn.dataset.solidIndex, 10)] };
+        body.querySelectorAll('.compose-bg-tile').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        selectedBg = { type: 'solid', value: SOLID_PRESETS[parseInt(btn.dataset.solidIndex, 10)].color, backgroundId: null };
         redrawPreview();
       });
-    });
-
-    document.getElementById('quoteBgUpload').addEventListener('change', async function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const err = validateImageFile(file);
-      if (err) { document.getElementById('quoteStatus').textContent = err; return; }
-      customFile = file;
-      selectedBg = { type: 'image', value: URL.createObjectURL(file) };
-      redrawPreview();
     });
 
     redrawPreview();
@@ -292,56 +335,53 @@ function renderQuoteComposer(body, onDone) {
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Sharing…';
+      statusEl.textContent = 'Checking your quote…';
 
       try {
-        let backgroundImageUrl = selectedBg.type === 'image' && !customFile ? selectedBg.value : null;
-        let backgroundId = selectedBg.backgroundId || null;
-
-        if (customFile) {
-          statusEl.textContent = 'Compressing your photo…';
-          const compressed = await compressImageFile(customFile);
-          statusEl.textContent = 'Uploading…';
-          backgroundImageUrl = await uploadImage(compressed, 'post');
-        }
-
-        statusEl.textContent = 'Checking content…';
-        const profile = getCurrentProfile();
-        const composedBlob = await composeQuoteImage({
-          backgroundType: selectedBg.type,
-          backgroundUrl: backgroundImageUrl,
-          solidColor: selectedBg.type === 'solid' ? selectedBg.value : null,
-          gradientColors: selectedBg.type === 'gradient' ? selectedBg.value : null,
-          text: text, align: align, textColor: textColor,
-          attribution: profile.display_name,
-        });
-
         const res = await fetch(CHRONIK_API_BASE + '/quotes/create', {
           method: 'POST',
           headers: Object.assign({ 'content-type': 'application/json' }, authHeaders()),
           body: JSON.stringify({
-            text: text, category: null, background_id: backgroundId,
-            background_image_url: backgroundImageUrl, align: align, text_color: textColor,
+            text: text,
+            category: category,
+            background_id: selectedBg.backgroundId || null,
+            background_image_url: selectedBg.type === 'image' ? selectedBg.value : null,
+            solid_color: selectedBg.type === 'solid' ? selectedBg.value : null,
+            align: align,
+            text_color: textColor,
+            font: FONT_OPTIONS[fontIndex].name,
           }),
         });
         const data = await res.json();
 
         if (!res.ok) {
-          statusEl.textContent = data.error || 'Could not share quote.';
+          statusEl.textContent = friendlyError(data.error);
           submitBtn.disabled = false;
           submitBtn.textContent = 'Share Quote';
           return;
         }
 
-        statusEl.textContent = 'Shared! Downloading your image…';
-        downloadBlob(composedBlob, 'chronik-quote.webp');
+        statusEl.textContent = 'Shared! Saving your image…';
+        const blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/webp', 0.92); });
+        downloadBlob(blob, 'chronik-quote.webp');
         setTimeout(function () { onDone && onDone(); }, 800);
       } catch (err) {
-        statusEl.textContent = 'Something went wrong: ' + err.message;
+        statusEl.textContent = 'Something went wrong. Please try again.';
         submitBtn.disabled = false;
         submitBtn.textContent = 'Share Quote';
       }
     });
   });
+}
+
+function friendlyError(rawError) {
+  if (!rawError) return 'Something went wrong. Please try again.';
+  const lower = rawError.toLowerCase();
+  if (lower.includes('moderation') || lower.includes('adult') || lower.includes('safety')) {
+    return 'This content couldn\u2019t be shared. Please keep posts appropriate for everyone.';
+  }
+  if (lower.includes('sign in')) return 'Please sign in to continue.';
+  return 'Something went wrong. Please try again.';
 }
 
 async function uploadImage(blob, purpose) {
@@ -354,6 +394,6 @@ async function uploadImage(blob, purpose) {
     body: formData,
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Upload failed');
+  if (!res.ok) throw new Error(friendlyError(data.error));
   return data.url;
 }
