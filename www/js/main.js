@@ -25,6 +25,7 @@ import * as Chronik from './chronik.js';
 import * as ChronikRender from './chronik-render.js';
 import * as Auth from './auth.js';
 import * as Compose from './compose.js';
+import * as Admin from './admin.js';
 
 const scrim = document.getElementById('scrim');
 const sheet = document.getElementById('sheet');
@@ -652,11 +653,18 @@ function openYouSheet() {
     '<div class="you-row"><span>Reading location</span><button class="you-action" id="youChangeLoc">' + countryLabel(userCountry) + ' &middot; change</button></div>' +
     '<div class="you-row"><span>Appearance</span><button class="you-action" id="youToggleTheme">' + (theme === 'dark' ? 'Switch to Light' : 'Switch to Dark') + '</button></div>' +
     '<div class="you-row"><span>Refresh everything</span><button class="you-action" id="youRefresh">Refresh now</button></div>' +
+    (Admin.isCurrentUserAdmin() ? '<div class="you-row"><span>Admin panel</span><button class="you-action" id="youOpenAdmin">Open</button></div>' : '') +
     '<p class="you-about">Chronik is an independent live news, heroes, and history reader by Liyog Bartoos O. Stories link back to their original publishers. LiyX Intelligence powers on-device summaries — no external AI calls, no data sent anywhere for that.</p>' +
     '</div>';
   scrim.classList.add('open');
   sheet.classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  const openAdminBtn = document.getElementById('youOpenAdmin');
+  if (openAdminBtn) openAdminBtn.addEventListener('click', function () {
+    sheetScroll.innerHTML = '<div id="adminContainer"></div>';
+    Admin.renderAdminPanel(document.getElementById('adminContainer'));
+  });
 
   if (!signedIn && window.google && window.google.accounts) {
     window.google.accounts.id.renderButton(
