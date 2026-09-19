@@ -597,13 +597,16 @@ document.getElementById('profileBackBtn').addEventListener('click', function () 
 
 document.getElementById('fabCompose').addEventListener('click', function () {
   sheetScroll.innerHTML = '';
-  Compose.renderComposeSheet(sheetScroll, function () {
-    closeSheet();
-    // Refresh whichever screen the person is likely to see their
-    // new content on, so it doesn't feel like it vanished.
+  Compose.renderComposeSheet(sheetScroll, function (keepOpen) {
+    // keepOpen=true (used by the quote flow's "Save image" step)
+    // refreshes the underlying feed without closing this sheet,
+    // so the person can still tap Save before dismissing it.
+    if (!keepOpen) {
+      closeSheet();
+      showToast('Shared to Chronik');
+    }
     if (activeScreen === 'chronik') loadChronikFeed();
     else if (activeScreen === 'home') loadHomeFeed();
-    showToast('Shared to Chronik');
   });
   scrim.classList.add('open');
   sheet.classList.add('open');
