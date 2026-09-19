@@ -8,7 +8,7 @@
 
 import { CHRONIK_API_BASE } from './sources.js';
 import { authHeaders, getCurrentProfile } from './auth.js';
-import { compressImageFile, validateImageFile } from './image-compress.js';
+import { compressImageFile, validateImageFile } from './media.js';
 
 async function apiGet(path) {
   const res = await fetch(CHRONIK_API_BASE + path, { headers: authHeaders() });
@@ -87,11 +87,13 @@ async function renderHistorySection(body) {
   body.innerHTML =
     '<div class="admin-block">' +
     '<h2 class="admin-block-title">Feature an existing event</h2>' +
+    '<p class="admin-field-help">"Featuring" an event makes it the ONE card shown on Home\u2019s "Today in History" for that calendar date (month + day, every year going forward) - search below, then tap Feature. Only one event per date can be featured at a time; featuring a new one automatically un-features the old one for that date.</p>' +
     '<input type="text" id="historySearch" class="admin-input" placeholder="Search events…">' +
     '<div id="historyList" class="admin-list"></div>' +
     '</div>' +
     '<div class="admin-block">' +
     '<h2 class="admin-block-title">Add a new event</h2>' +
+    '<p class="admin-field-help">Month/Day set WHICH CALENDAR DATE this appears on every year (e.g. month=8, day=28 for August 28th). Year is the specific year it actually happened, shown alongside the title.</p>' +
     '<input type="text" id="newHistTitle" class="admin-input" placeholder="Title">' +
     '<div class="admin-input-row">' +
     '<input type="number" id="newHistMonth" class="admin-input admin-input-small" placeholder="Month (1-12)" min="1" max="12">' +
@@ -191,10 +193,40 @@ function renderDailyQuoteSection(body) {
 
   function renderModeForm(mode) {
     const modeBody = body.querySelector('#dailyQuoteModeBody');
+    let selectedQuoteId = null;
+
     if (mode === 'manual') {
       modeBody.innerHTML =
-        '<input type="text" id="manualQuoteId" class="admin-input" placeholder="Quote ID (find it via the moderation log or the quote itself)">' +
-        '<button class="admin-submit" id="dailyQuoteSubmit">Save</button><p class="admin-status" id="dailyQuoteStatus"></p>';
+        '<p class="admin-field-help">Search for the quote you want to feature - no need to know its ID.</p>' +
+        '<input type="text" id="manualQuoteSearch" class="admin-input" placeholder="Search quotes by text…">' +
+        '<div id="manualQuoteResults" class="admin-list"></div>' +
+        '<p class="admin-field-help" id="manualQuoteSelectedLabel"></p>' +
+        '<button class="admin-submit" id="dailyQuoteSubmit" disabled>Save</button><p class="admin-status" id="dailyQuoteStatus"></p>';
+
+      let searchTimer = null;
+      modeBody.querySelector('#manualQuoteSearch').addEventListener('input', function (e) {
+        clearTimeout(searchTimer);
+        const q = e.target.value.trim();
+        searchTimer = setTimeout(async function () {
+          if (q.length < 2) { modeBody.querySelector('#manualQuoteResults').innerHTML = ''; return; }
+          try {
+            const data = await apiGet('/admin/search-quotes?search=' + encodeURIComponent(q));
+            const resultsEl = modeBody.querySelector('#manualQuoteResults');
+            resultsEl.innerHTML = data.quotes.length
+              ? data.quotes.map(function (qt) {
+                  return '<div class="admin-list-item admin-list-item-pickable" data-quote-id="' + qt.id + '"><div class="admin-list-item-info"><strong>' + qt.text.slice(0, 70) + (qt.text.length > 70 ? '…' : '') + '</strong><span>' + qt.author_name + '</span></div></div>';
+                }).join('')
+              : '<p class="admin-empty">No matching quotes.</p>';
+            resultsEl.querySelectorAll('[data-quote-id]').forEach(function (item) {
+              item.addEventListener('click', function () {
+                selectedQuoteId = item.dataset.quoteId;
+                modeBody.querySelector('#manualQuoteSelectedLabel').textContent = 'Selected: ' + item.querySelector('strong').textContent;
+                modeBody.querySelector('#dailyQuoteSubmit').disabled = false;
+              });
+            });
+          } catch (e) { /* search failure is non-fatal, just shows no results */ }
+        }, 350);
+      });
     } else if (mode === 'admin_original' || mode === 'ai_generated') {
       modeBody.innerHTML =
         '<textarea id="manualQuoteText" class="admin-input admin-textarea" placeholder="Quote text" rows="3"></textarea>' +
@@ -209,7 +241,7 @@ function renderDailyQuoteSection(body) {
       statusEl.textContent = 'Saving…';
       try {
         const payload = { mode: mode };
-        if (mode === 'manual') payload.manual_quote_id = modeBody.querySelector('#manualQuoteId').value.trim();
+        if (mode === 'manual') payload.manual_quote_id = selectedQuoteId;
         if (mode === 'admin_original' || mode === 'ai_generated') {
           payload.manual_text = modeBody.querySelector('#manualQuoteText').value.trim();
           payload.manual_author_label = modeBody.querySelector('#manualAuthorLabel').value.trim() || 'Chronik';
@@ -264,6 +296,81 @@ function renderBackgroundsSection(body) {
   });
 }
 
+async function renderHeroManagePanel(container, heroId, heroName) {
+  container.innerHTML = '<p class="admin-loading">Loading…</p>';
+
+  let quotes = [];
+  try {
+    const data = await apiGet('/admin/hero-quotes?profile_id=' + heroId);
+    quotes = data.quotes;
+  } catch (e) { /* non-fatal */ }
+
+  container.innerHTML =
+    '<div class="admin-manage-panel">' +
+    '<h3 class="admin-manage-title">Managing: ' + heroName + '</h3>' +
+
+    '<p class="admin-field-help">Existing quotes from ' + heroName + '</p>' +
+    '<div class="admin-list">' +
+    (quotes.length
+      ? quotes.map(function (q) { return '<div class="admin-list-item"><div class="admin-list-item-info"><strong>' + q.text.slice(0, 60) + (q.text.length > 60 ? '…' : '') + '</strong><span>' + (q.category || '') + '</span></div></div>'; }).join('')
+      : '<p class="admin-empty">No quotes yet for this Hero.</p>') +
+    '</div>' +
+
+    '<p class="admin-field-help">Add a new quote, attributed to ' + heroName + '. Uses the same curated backgrounds as any quote.</p>' +
+    '<textarea id="heroQuoteText" class="admin-input admin-textarea" placeholder="Quote text" rows="3"></textarea>' +
+    '<input type="text" id="heroQuoteCategory" class="admin-input" placeholder="Category, e.g. Courage, Leadership, Faith">' +
+    '<button class="admin-submit" id="heroQuoteSubmit">Add Quote</button>' +
+    '<p class="admin-status" id="heroQuoteStatus"></p>' +
+
+    '<p class="admin-field-help" style="margin-top:20px;">Add a timeline entry - a life event that will appear on ' + heroName + '\u2019s profile page, and can also surface as a Today in History card if you feature it there.</p>' +
+    '<input type="text" id="heroTimelineTitle" class="admin-input" placeholder="Event title, e.g. Born in Atlanta, Georgia">' +
+    '<div class="admin-input-row">' +
+    '<input type="number" id="heroTimelineMonth" class="admin-input admin-input-small" placeholder="Month" min="1" max="12">' +
+    '<input type="number" id="heroTimelineDay" class="admin-input admin-input-small" placeholder="Day" min="1" max="31">' +
+    '<input type="number" id="heroTimelineYear" class="admin-input admin-input-small" placeholder="Year">' +
+    '</div>' +
+    '<textarea id="heroTimelineSummary" class="admin-input admin-textarea" placeholder="What happened" rows="3"></textarea>' +
+    '<button class="admin-submit" id="heroTimelineSubmit">Add Timeline Entry</button>' +
+    '<p class="admin-status" id="heroTimelineStatus"></p>' +
+    '</div>';
+
+  container.querySelector('#heroQuoteSubmit').addEventListener('click', async function () {
+    const statusEl = container.querySelector('#heroQuoteStatus');
+    const text = container.querySelector('#heroQuoteText').value.trim();
+    if (!text) { statusEl.textContent = 'Write the quote first.'; return; }
+    statusEl.textContent = 'Checking and saving…';
+    try {
+      await apiPost('/admin/hero-quote', {
+        profile_id: heroId, text: text,
+        category: container.querySelector('#heroQuoteCategory').value.trim() || null,
+      });
+      statusEl.textContent = 'Added!';
+      setTimeout(function () { renderHeroManagePanel(container, heroId, heroName); }, 600);
+    } catch (e) {
+      statusEl.textContent = 'Could not add quote: ' + e.message;
+    }
+  });
+
+  container.querySelector('#heroTimelineSubmit').addEventListener('click', async function () {
+    const statusEl = container.querySelector('#heroTimelineStatus');
+    const title = container.querySelector('#heroTimelineTitle').value.trim();
+    const month = parseInt(container.querySelector('#heroTimelineMonth').value, 10);
+    const day = parseInt(container.querySelector('#heroTimelineDay').value, 10);
+    if (!title || !month || !day) { statusEl.textContent = 'Title, month, and day are required.'; return; }
+    statusEl.textContent = 'Saving…';
+    try {
+      await apiPost('/admin/hero-timeline', {
+        profile_id: heroId, title: title, month: month, day: day,
+        year: parseInt(container.querySelector('#heroTimelineYear').value, 10) || null,
+        summary: container.querySelector('#heroTimelineSummary').value.trim() || null,
+      });
+      statusEl.textContent = 'Added to their timeline!';
+    } catch (e) {
+      statusEl.textContent = 'Could not add: ' + e.message;
+    }
+  });
+}
+
 async function renderHeroesSection(body) {
   let heroes = [];
   try {
@@ -274,29 +381,45 @@ async function renderHeroesSection(body) {
   body.innerHTML =
     '<div class="admin-block">' +
     '<h2 class="admin-block-title">Existing Heroes</h2>' +
-    '<div class="admin-list">' +
+    '<div class="admin-list" id="heroesList">' +
     (heroes.length
-      ? heroes.map(function (h) { return '<div class="admin-list-item"><div class="admin-list-item-info"><strong>' + h.display_name + '</strong><span>' + (h.era || '') + '</span></div></div>'; }).join('')
+      ? heroes.map(function (h) {
+          return '<div class="admin-list-item">' +
+            '<div class="admin-list-item-info"><strong>' + h.display_name + '</strong><span>' + (h.era || '') + '</span></div>' +
+            '<button class="admin-feature-btn" data-manage-hero="' + h.id + '" data-hero-name="' + h.display_name + '">Manage</button>' +
+            '</div>';
+        }).join('')
       : '<p class="admin-empty">No heroes yet.</p>') +
     '</div>' +
+    '<div id="heroManagePanel"></div>' +
     '</div>' +
     '<div class="admin-block">' +
     '<h2 class="admin-block-title">Add a new Hero</h2>' +
-    '<input type="text" id="heroName" class="admin-input" placeholder="Full name">' +
+    '<p class="admin-field-help">Full name - how they\u2019ll be identified everywhere (required).</p>' +
+    '<input type="text" id="heroName" class="admin-input" placeholder="e.g. Martin Luther King Jr.">' +
     '<div class="admin-input-row">' +
-    '<input type="text" id="heroEra" class="admin-input" placeholder="Era (e.g. 1929-1968)">' +
-    '<input type="text" id="heroCategory" class="admin-input" placeholder="Category">' +
+    '<input type="text" id="heroEra" class="admin-input" placeholder="Era, e.g. 1929-1968">' +
+    '<input type="text" id="heroCategory" class="admin-input" placeholder="Category, e.g. Civil Rights">' +
     '</div>' +
-    '<input type="text" id="heroTagline" class="admin-input" placeholder="One-line tagline">' +
-    '<textarea id="heroBioShort" class="admin-input admin-textarea" placeholder="Short bio (for cards)" rows="2"></textarea>' +
+    '<p class="admin-field-help">Tagline - a short defining line shown right under their name, like a subtitle.</p>' +
+    '<input type="text" id="heroTagline" class="admin-input" placeholder="e.g. Baptist minister and civil rights leader">' +
+    '<p class="admin-field-help">Short bio - one or two sentences, used on preview cards.</p>' +
+    '<textarea id="heroBioShort" class="admin-input admin-textarea" placeholder="Short bio for cards" rows="2"></textarea>' +
+    '<p class="admin-field-help">Full biography - shown on their profile page.</p>' +
     '<textarea id="heroBioFull" class="admin-input admin-textarea" placeholder="Full biography" rows="5"></textarea>' +
+    '<p class="admin-field-help">Avatar - their small circular profile photo.</p>' +
     '<input type="file" id="heroAvatarInput" accept="image/*" class="admin-file-input">' +
-    '<label class="admin-file-label">Avatar photo</label>' +
+    '<p class="admin-field-help">Cover photo - the wide banner image at the top of their profile.</p>' +
     '<input type="file" id="heroCoverInput" accept="image/*" class="admin-file-input">' +
-    '<label class="admin-file-label">Cover photo</label>' +
     '<button class="admin-submit" id="heroSubmit">Create Hero</button>' +
     '<p class="admin-status" id="heroStatus"></p>' +
     '</div>';
+
+  body.querySelectorAll('[data-manage-hero]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      renderHeroManagePanel(body.querySelector('#heroManagePanel'), btn.dataset.manageHero, btn.dataset.heroName);
+    });
+  });
 
   let avatarFile = null, coverFile = null;
   body.querySelector('#heroAvatarInput').addEventListener('change', function (e) { avatarFile = e.target.files[0] || null; });
