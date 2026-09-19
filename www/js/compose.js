@@ -7,8 +7,7 @@
 
 import { CHRONIK_API_BASE } from './sources.js';
 import { authHeaders, isSignedIn, getCurrentProfile } from './auth.js';
-import { compressImageFile, validateImageFile } from './image-compress.js';
-import { downloadBlob } from './quote-composer.js';
+import { compressImageFile, validateImageFile, downloadBlob } from './media.js';
 
 let cachedBackgrounds = null;
 
@@ -361,10 +360,21 @@ function renderQuoteComposer(body, onDone) {
           return;
         }
 
-        statusEl.textContent = 'Shared! Saving your image…';
+        // Per decision: don't auto-download. Offer a clear,
+        // optional "Save image" action instead, so the person
+        // chooses whether they want the file on their device.
         const blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/webp', 0.92); });
-        downloadBlob(blob, 'chronik-quote.webp');
-        setTimeout(function () { onDone && onDone(); }, 800);
+        submitBtn.style.display = 'none';
+        statusEl.innerHTML = 'Shared to Chronik! <button class="compose-save-link" id="quoteSaveBtn">Save image to my device</button>';
+        const saveBtn = document.getElementById('quoteSaveBtn');
+        if (saveBtn) saveBtn.addEventListener('click', function () {
+          downloadBlob(blob, 'chronik-quote.webp');
+          saveBtn.textContent = 'Saved!';
+        });
+        // Refresh the underlying feed now, but leave this sheet
+        // open so the save option stays available - the person
+        // closes it themselves when ready, not on a timer.
+        onDone && onDone(true);
       } catch (err) {
         statusEl.textContent = 'Something went wrong. Please try again.';
         submitBtn.disabled = false;
