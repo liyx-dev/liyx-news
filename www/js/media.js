@@ -31,11 +31,13 @@ export async function compressImageFile(file) {
   try {
     bitmap = await createImageBitmap(file);
   } catch (err) {
-    // Genuinely could not decode this file - explain why in
-    // plain language rather than a bare technical error, since
-    // the most common real cause (a cloud-only photo not yet
-    // downloaded to the device) has an actionable fix.
-    throw new Error('This photo couldn\u2019t be opened. If it\u2019s a cloud photo (Google Photos), try saving it to your device first, then choose it again.');
+    // Surface the REAL browser error rather than a guessed
+    // generic message - a prior version of this code swallowed
+    // the actual error and replaced it with a guess about cloud
+    // photos, which made real diagnosis impossible. Whatever the
+    // browser actually says (its exact DOMException name/message)
+    // is now shown, so the real cause can be identified for certain.
+    throw new Error('Image processing failed: ' + (err.name || 'Error') + ' - ' + (err.message || String(err)));
   }
 
   let width = bitmap.width;
