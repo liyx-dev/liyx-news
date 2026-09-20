@@ -147,7 +147,7 @@ function renderPostComposer(body, onDone) {
       setStatus('Posted!');
       setTimeout(function () { onDone && onDone(); }, 500);
     } catch (err) {
-      setStatus('Something went wrong. Please try again.');
+      setStatus(err.message || 'Something went wrong. Please try again.');
       submitBtn.disabled = false;
       submitBtn.textContent = 'Post';
     }
