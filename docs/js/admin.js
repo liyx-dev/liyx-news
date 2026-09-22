@@ -32,6 +32,7 @@ async function uploadImage(blob, purpose) {
   const formData = new FormData();
   formData.append('file', blob, 'upload.webp');
   formData.append('purpose', purpose);
+  formData.append('skip_moderation', 'true'); // Flag sent to Worker endpoint for admin uploads
 
   const headers = Object.assign({}, authHeaders());
   delete headers['content-type'];
@@ -303,7 +304,6 @@ function renderBackgroundsSection(body) {
 
     statusEl.textContent = 'Processing image…';
     try {
-      // Compress immediately on file selection to keep Android file handles fresh
       activeCompressedBlob = await compressImageFile(file);
       statusEl.textContent = 'Image ready to upload.';
     } catch (compressErr) {
@@ -319,7 +319,7 @@ function renderBackgroundsSection(body) {
 
     try {
       statusEl.textContent = 'Uploading…';
-      const url = await uploadImage(activeCompressedBlob, 'quote_background');
+      const url = await uploadImage(activeCompressedBlob, 'admin_quote_background');
       statusEl.textContent = 'Saving to gallery…';
       await apiPost('/admin/quote-background', { image_url: url, category: body.querySelector('#bgCategory').value.trim() || null });
       statusEl.textContent = 'Added to the gallery!';
@@ -513,11 +513,11 @@ async function renderHeroesSection(body) {
       let avatarUrl = null, coverUrl = null;
       if (activeAvatarBlob) {
         statusEl.textContent = 'Uploading avatar…';
-        avatarUrl = await uploadImage(activeAvatarBlob, 'post');
+        avatarUrl = await uploadImage(activeAvatarBlob, 'admin_hero_avatar');
       }
       if (activeCoverBlob) {
         statusEl.textContent = 'Uploading cover photo…';
-        coverUrl = await uploadImage(activeCoverBlob, 'post');
+        coverUrl = await uploadImage(activeCoverBlob, 'admin_hero_cover');
       }
 
       statusEl.textContent = 'Creating profile…';
