@@ -25,29 +25,27 @@
 // and WhatsApp use for shared/thumbnail images.
 const MAX_DIMENSION = 1080;
 const WEBP_QUALITY = 0.75;
-export async function compressImageFile(file) {
-  let bitmap = null;
 
-  // STEP 1: Try reading as ArrayBuffer -> Blob -> ImageBitmap
-  // Buffering the bytes first bypasses Android Content URI lockups.
+  export async function compressImageFile(file) {
+  if (!file) throw new Error('No file provided');
+
+  let canvas, ctx, width, height;
+
+  // STEP 1: Direct Object URL approach (Most reliable on Android Chrome)
+  // URL.createObjectURL creates a direct blob URI without triggering FileReader permissions issues.
+  let objectUrl = null;
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    const blob = new Blob([arrayBuffer], { type: file.type || 'image/jpeg' });
-    bitmap = await createImageBitmap(blob);
-  } catch (e1) {
-    // STEP 2: Secondary attempt directly on the file
-    try {
-      bitmap = await createImageBitmap(file);
-    } catch (e2) {
-      bitmap = null;
-    }
-  }
+    objectUrl = URL.createObjectURL(file);
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('Image failed to decode from URL'));
+      i.src = objectUrl;
+    });
 
-  let width, height, canvas, ctx;
+    width = img.naturalWidth || img.width;
+    height = img.naturalHeight || img.height;
 
-  if (bitmap) {
-    width = bitmap.width;
-    height = bitmap.height;
     if (width > height && width > MAX_DIMENSION) {
       height = Math.round(height * (MAX_DIMENSION / width));
       width = MAX_DIMENSION;
@@ -60,26 +58,14 @@ export async function compressImageFile(file) {
     canvas.width = width;
     canvas.height = height;
     ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0, width, height);
-    if (typeof bitmap.close === 'function') bitmap.close();
-  } else {
-    // STEP 3: Fallback using HTML Image Element + FileReader DataURL
-    // Guarantees compatibility on mobile WebViews where createImageBitmap fails.
+    ctx.drawImage(img, 0, 0, width, height);
+  } catch (urlErr) {
+    // STEP 2: Fallback to createImageBitmap direct stream
     try {
-      const img = await new Promise(function (resolve, reject) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          const image = new Image();
-          image.onload = function () { resolve(image); };
-          image.onerror = function () { reject(new Error('HTML Image load failed')); };
-          image.src = e.target.result;
-        };
-        reader.onerror = function () { reject(new Error('FileReader failed')); };
-        reader.readAsDataURL(file);
-      });
+      const bitmap = await createImageBitmap(file);
+      width = bitmap.width;
+      height = bitmap.height;
 
-      width = img.width;
-      height = img.height;
       if (width > height && width > MAX_DIMENSION) {
         height = Math.round(height * (MAX_DIMENSION / width));
         width = MAX_DIMENSION;
@@ -92,22 +78,33 @@ export async function compressImageFile(file) {
       canvas.width = width;
       canvas.height = height;
       ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-    } catch (err) {
-      throw new Error('Image processing failed: ' + (err.name || 'Error') + ' - ' + (err.message || String(err)));
+      ctx.drawImage(bitmap, 0, 0, width, height);
+      if (typeof bitmap.close === 'function') bitmap.close();
+    } catch (bitmapErr) {
+      throw new Error('Could not read image file. Try selecting a local photo from gallery.');
+    }
+  } finally {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
     }
   }
 
-  return new Promise(function (resolve, reject) {
-    canvas.toBlob(function (blob) {
-      if (!blob) {
-        reject(new Error('Could not prepare this image. Please try a different photo.'));
-        return;
-      }
-      resolve(blob);
-    }, 'image/webp', WEBP_QUALITY);
+  // STEP 3: Convert Canvas to WebP Blob
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to encode image to WebP'));
+          return;
+        }
+        resolve(blob);
+      },
+      'image/webp',
+      WEBP_QUALITY
+    );
   });
 }
+  
 
 export function validateImageFile(file) {
   const MAX_SOURCE_MB = 25;
