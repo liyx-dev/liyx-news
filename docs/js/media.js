@@ -25,41 +25,85 @@
 // and WhatsApp use for shared/thumbnail images.
 const MAX_DIMENSION = 1080;
 const WEBP_QUALITY = 0.75;
-
 export async function compressImageFile(file) {
-  let bitmap;
+  let bitmap = null;
+
+  // STEP 1: Try reading as ArrayBuffer -> Blob -> ImageBitmap
+  // Buffering the bytes first bypasses Android Content URI lockups.
   try {
-    bitmap = await createImageBitmap(file);
-  } catch (err) {
-    // Surface the REAL browser error rather than a guessed
-    // generic message - a prior version of this code swallowed
-    // the actual error and replaced it with a guess about cloud
-    // photos, which made real diagnosis impossible. Whatever the
-    // browser actually says (its exact DOMException name/message)
-    // is now shown, so the real cause can be identified for certain.
-    throw new Error('Image processing failed: ' + (err.name || 'Error') + ' - ' + (err.message || String(err)));
+    const arrayBuffer = await file.arrayBuffer();
+    const blob = new Blob([arrayBuffer], { type: file.type || 'image/jpeg' });
+    bitmap = await createImageBitmap(blob);
+  } catch (e1) {
+    // STEP 2: Secondary attempt directly on the file
+    try {
+      bitmap = await createImageBitmap(file);
+    } catch (e2) {
+      bitmap = null;
+    }
   }
 
-  let width = bitmap.width;
-  let height = bitmap.height;
-  if (width > height && width > MAX_DIMENSION) {
-    height = Math.round(height * (MAX_DIMENSION / width));
-    width = MAX_DIMENSION;
-  } else if (height > MAX_DIMENSION) {
-    width = Math.round(width * (MAX_DIMENSION / height));
-    height = MAX_DIMENSION;
-  }
+  let width, height, canvas, ctx;
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
+  if (bitmap) {
+    width = bitmap.width;
+    height = bitmap.height;
+    if (width > height && width > MAX_DIMENSION) {
+      height = Math.round(height * (MAX_DIMENSION / width));
+      width = MAX_DIMENSION;
+    } else if (height > MAX_DIMENSION) {
+      width = Math.round(width * (MAX_DIMENSION / height));
+      height = MAX_DIMENSION;
+    }
+
+    canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    if (typeof bitmap.close === 'function') bitmap.close();
+  } else {
+    // STEP 3: Fallback using HTML Image Element + FileReader DataURL
+    // Guarantees compatibility on mobile WebViews where createImageBitmap fails.
+    try {
+      const img = await new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const image = new Image();
+          image.onload = function () { resolve(image); };
+          image.onerror = function () { reject(new Error('HTML Image load failed')); };
+          image.src = e.target.result;
+        };
+        reader.onerror = function () { reject(new Error('FileReader failed')); };
+        reader.readAsDataURL(file);
+      });
+
+      width = img.width;
+      height = img.height;
+      if (width > height && width > MAX_DIMENSION) {
+        height = Math.round(height * (MAX_DIMENSION / width));
+        width = MAX_DIMENSION;
+      } else if (height > MAX_DIMENSION) {
+        width = Math.round(width * (MAX_DIMENSION / height));
+        height = MAX_DIMENSION;
+      }
+
+      canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+    } catch (err) {
+      throw new Error('Image processing failed: ' + (err.name || 'Error') + ' - ' + (err.message || String(err)));
+    }
+  }
 
   return new Promise(function (resolve, reject) {
     canvas.toBlob(function (blob) {
-      if (!blob) { reject(new Error('Could not prepare this image. Please try a different photo.')); return; }
+      if (!blob) {
+        reject(new Error('Could not prepare this image. Please try a different photo.'));
+        return;
+      }
       resolve(blob);
     }, 'image/webp', WEBP_QUALITY);
   });
