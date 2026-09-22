@@ -94,44 +94,79 @@ function renderPostComposer(body, onDone) {
     '<p class="compose-status" id="postStatus"></p>' +
     '</div>';
 
-  let selectedFile = null;
-
-  document.getElementById('postImageInput').addEventListener('change', function (e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const err = validateImageFile(file);
-    if (err) { setStatus(err); return; }
-    selectedFile = file;
-    const preview = document.getElementById('postImagePreview');
-    document.getElementById('postImagePreviewImg').src = URL.createObjectURL(file);
-    preview.style.display = 'block';
-  });
-
-  document.getElementById('postImageRemove').addEventListener('click', function () {
-    selectedFile = null;
-    document.getElementById('postImagePreview').style.display = 'none';
-    document.getElementById('postImageInput').value = '';
-  });
+  let activeCompressedBlob = null;
+  let activePreviewUrl = null;
 
   function setStatus(msg) {
     document.getElementById('postStatus').textContent = msg;
   }
 
+  function clearActiveImage() {
+    activeCompressedBlob = null;
+    if (activePreviewUrl) {
+      URL.revokeObjectURL(activePreviewUrl);
+      activePreviewUrl = null;
+    }
+    const previewImg = document.getElementById('postImagePreviewImg');
+    if (previewImg) previewImg.src = '';
+    const preview = document.getElementById('postImagePreview');
+    if (preview) preview.style.display = 'none';
+    const input = document.getElementById('postImageInput');
+    if (input) input.value = '';
+  }
+
+  document.getElementById('postImageInput').addEventListener('change', async function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const err = validateImageFile(file);
+    if (err) { 
+      setStatus(err); 
+      return; 
+    }
+
+    setStatus('Processing photo…');
+
+    try {
+      // Compress immediately upon file selection to avoid Android Chromium FileReader lock issues
+      activeCompressedBlob = await compressImageFile(file);
+
+      if (activePreviewUrl) {
+        URL.revokeObjectURL(activePreviewUrl);
+      }
+
+      activePreviewUrl = URL.createObjectURL(activeCompressedBlob);
+      const previewImg = document.getElementById('postImagePreviewImg');
+      previewImg.src = activePreviewUrl;
+      document.getElementById('postImagePreview').style.display = 'block';
+      setStatus('');
+    } catch (compressErr) {
+      console.error('Image processing error:', compressErr);
+      clearActiveImage();
+      setStatus(compressErr.message || 'Could not process photo. Try choosing another picture.');
+    }
+  });
+
+  document.getElementById('postImageRemove').addEventListener('click', function () {
+    clearActiveImage();
+  });
+
   document.getElementById('postSubmit').addEventListener('click', async function () {
     const submitBtn = document.getElementById('postSubmit');
     const text = document.getElementById('postText').value.trim();
-    if (!text && !selectedFile) { setStatus('Write something or add a photo.'); return; }
+    if (!text && !activeCompressedBlob) { 
+      setStatus('Write something or add a photo.'); 
+      return; 
+    }
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Posting…';
 
     try {
       let imageUrl = null;
-      if (selectedFile) {
-        setStatus('Preparing your photo…');
-        const compressed = await compressImageFile(selectedFile);
+      if (activeCompressedBlob) {
         setStatus('Uploading…');
-        imageUrl = await uploadImage(compressed, 'post');
+        imageUrl = await uploadImage(activeCompressedBlob, 'post');
       }
 
       setStatus('Publishing…');
@@ -150,6 +185,7 @@ function renderPostComposer(body, onDone) {
       }
 
       setStatus('Posted!');
+      clearActiveImage();
       setTimeout(function () { onDone && onDone(); }, 500);
     } catch (err) {
       console.error('Post Submit Error:', err);
@@ -400,7 +436,6 @@ async function uploadImage(blob, purpose) {
   formData.append('file', blob, 'upload.webp');
   formData.append('purpose', purpose);
 
-  // FIX: Strip Content-Type header so browser sets multipart boundary automatically
   const headers = Object.assign({}, authHeaders());
   delete headers['content-type'];
   delete headers['Content-Type'];
