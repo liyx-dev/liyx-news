@@ -13,10 +13,15 @@ let cachedBackgrounds = null;
 
 async function fetchBackgrounds() {
   if (cachedBackgrounds) return cachedBackgrounds;
-  const res = await fetch(CHRONIK_API_BASE + '/quote-backgrounds');
-  const data = await res.json();
-  cachedBackgrounds = data.backgrounds || [];
-  return cachedBackgrounds;
+  try {
+    const res = await fetch(CHRONIK_API_BASE + '/quote-backgrounds');
+    const data = await res.json();
+    cachedBackgrounds = data.backgrounds || [];
+    return cachedBackgrounds;
+  } catch (err) {
+    console.error('Failed to load quote backgrounds:', err);
+    return [];
+  }
 }
 
 const QUOTE_CATEGORIES = ['Motivation', 'Faith', 'Leadership', 'Love', 'Resilience', 'Wisdom', 'Success', 'Gratitude'];
@@ -147,6 +152,7 @@ function renderPostComposer(body, onDone) {
       setStatus('Posted!');
       setTimeout(function () { onDone && onDone(); }, 500);
     } catch (err) {
+      console.error('Post Submit Error:', err);
       setStatus(err.message || 'Something went wrong. Please try again.');
       submitBtn.disabled = false;
       submitBtn.textContent = 'Post';
@@ -360,9 +366,6 @@ function renderQuoteComposer(body, onDone) {
           return;
         }
 
-        // Per decision: don't auto-download. Offer a clear,
-        // optional "Save image" action instead, so the person
-        // chooses whether they want the file on their device.
         const blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/webp', 0.92); });
         submitBtn.style.display = 'none';
         statusEl.innerHTML = 'Shared to Chronik! <button class="compose-save-link" id="quoteSaveBtn">Save image to my device</button>';
@@ -371,11 +374,9 @@ function renderQuoteComposer(body, onDone) {
           downloadBlob(blob, 'chronik-quote.webp');
           saveBtn.textContent = 'Saved!';
         });
-        // Refresh the underlying feed now, but leave this sheet
-        // open so the save option stays available - the person
-        // closes it themselves when ready, not on a timer.
         onDone && onDone(true);
       } catch (err) {
+        console.error('Quote Submit Error:', err);
         statusEl.textContent = 'Something went wrong. Please try again.';
         submitBtn.disabled = false;
         submitBtn.textContent = 'Share Quote';
@@ -391,18 +392,25 @@ function friendlyError(rawError) {
     return 'This content couldn\u2019t be shared. Please keep posts appropriate for everyone.';
   }
   if (lower.includes('sign in')) return 'Please sign in to continue.';
-  return 'Something went wrong. Please try again.';
+  return rawError || 'Something went wrong. Please try again.';
 }
 
 async function uploadImage(blob, purpose) {
   const formData = new FormData();
   formData.append('file', blob, 'upload.webp');
   formData.append('purpose', purpose);
+
+  // FIX: Strip Content-Type header so browser sets multipart boundary automatically
+  const headers = Object.assign({}, authHeaders());
+  delete headers['content-type'];
+  delete headers['Content-Type'];
+
   const res = await fetch(CHRONIK_API_BASE + '/upload', {
     method: 'POST',
-    headers: authHeaders(),
+    headers: headers,
     body: formData,
   });
+  
   const data = await res.json();
   if (!res.ok) throw new Error(friendlyError(data.error));
   return data.url;
