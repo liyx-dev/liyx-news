@@ -3,36 +3,19 @@
 // WebP, client-side, before it ever reaches the network. This
 // is what keeps R2 storage small and free-tier-sustainable
 // long-term.
-//
-// Uses createImageBitmap + file.arrayBuffer() rather than the
-// older FileReader.readAsDataURL() API. Real-world testing
-// surfaced a confirmed Chromium bug: photos picked via Google
-// Photos/Drive on Android that are cloud-backed (not fully
-// downloaded to the device) throw NotReadableError under
-// FileReader - this is what "Could not read file" traced back
-// to. createImageBitmap uses a different, more robust decode
-// path that handles these files correctly.
 // ============================================================
 
-// Tuned for real-world storage savings after testing actual
-// compression ratios: capping the long edge at 1080px (standard
-// "Full HD" - already sharper than any surface in this app ever
-// displays an image at) combined with WebP quality 75 took a
-// realistic 5.1MB phone photo down to ~193KB, a ~96% reduction,
-// with no visible quality loss at any size this app actually
-// renders images. This mirrors "compress aggressively while the
-// photo still looks right," the same principle Google Photos
-// and WhatsApp use for shared/thumbnail images.
 const MAX_DIMENSION = 1080;
 const WEBP_QUALITY = 0.75;
 
-  export async function compressImageFile(file) {
+export async function compressImageFile(file) {
   if (!file) throw new Error('No file provided');
 
   let canvas, ctx, width, height;
 
   // STEP 1: Direct Object URL approach (Most reliable on Android Chrome)
-  // URL.createObjectURL creates a direct blob URI without triggering FileReader permissions issues.
+  // URL.createObjectURL creates an instant blob URI, bypassing Android
+  // FileReader content-URI permission locks.
   let objectUrl = null;
   try {
     objectUrl = URL.createObjectURL(file);
@@ -113,22 +96,7 @@ export function validateImageFile(file) {
 }
 
 // ============================================================
-// QUOTE COMPOSITING - builds a real, flattened quote image
-// entirely in the browser using Canvas, so the final result is
-// one genuine WebP file with the text permanently part of the
-// pixels - downloadable, shareable, and usable as a real Open
-// Graph preview image.
-//
-// Merged into this same file (was previously its own
-// quote-composer.js) specifically because it is small, tightly
-// related "client-side image work" that was easy to lose track
-// of across separate files during debugging - fewer files for
-// this category of logic makes future fixes easier to locate.
-//
-// This deliberately runs on the CLIENT, not a Worker: Cloudflare
-// Workers has no canvas/DOM, and its real Images product is
-// metered/paid - doing this compositing for free, at any scale,
-// only works by using the phone's own browser.
+// QUOTE COMPOSITING
 // ============================================================
 
 const CANVAS_WIDTH = 1080;
