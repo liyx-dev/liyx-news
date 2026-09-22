@@ -16,6 +16,7 @@ async function apiGet(path) {
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
+
 async function apiPost(path, body) {
   const res = await fetch(CHRONIK_API_BASE + path, {
     method: 'POST',
@@ -26,11 +27,21 @@ async function apiPost(path, body) {
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
+
 async function uploadImage(blob, purpose) {
   const formData = new FormData();
   formData.append('file', blob, 'upload.webp');
   formData.append('purpose', purpose);
-  const res = await fetch(CHRONIK_API_BASE + '/upload', { method: 'POST', headers: authHeaders(), body: formData });
+
+  const headers = Object.assign({}, authHeaders());
+  delete headers['content-type'];
+  delete headers['Content-Type'];
+
+  const res = await fetch(CHRONIK_API_BASE + '/upload', { 
+    method: 'POST', 
+    headers: headers, 
+    body: formData 
+  });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Upload failed');
   return data.url;
@@ -42,7 +53,12 @@ export function isCurrentUserAdmin() {
 }
 
 const SECTIONS = ['history', 'daily-quote', 'backgrounds', 'heroes'];
-const SECTION_LABELS = { 'history': 'Today in History', 'daily-quote': 'Daily Quote', 'backgrounds': 'Backgrounds', 'heroes': 'Heroes' };
+const SECTION_LABELS = { 
+  'history': 'Today in History', 
+  'daily-quote': 'Daily Quote', 
+  'backgrounds': 'Backgrounds', 
+  'heroes': 'Heroes' 
+};
 
 export function renderAdminPanel(container) {
   container.innerHTML =
@@ -268,27 +284,46 @@ function renderBackgroundsSection(body) {
     '<p class="admin-status" id="bgStatus"></p>' +
     '</div>';
 
-  let selectedFile = null;
-  body.querySelector('#bgUploadInput').addEventListener('change', function (e) {
+  let activeCompressedBlob = null;
+
+  body.querySelector('#bgUploadInput').addEventListener('change', async function (e) {
+    const statusEl = body.querySelector('#bgStatus');
     const file = e.target.files[0];
+    if (!file) {
+      activeCompressedBlob = null;
+      return;
+    }
+
     const err = validateImageFile(file);
-    if (err) { body.querySelector('#bgStatus').textContent = err; return; }
-    selectedFile = file;
+    if (err) { 
+      statusEl.textContent = err; 
+      activeCompressedBlob = null;
+      return; 
+    }
+
+    statusEl.textContent = 'Processing image…';
+    try {
+      // Compress immediately on file selection to keep Android file handles fresh
+      activeCompressedBlob = await compressImageFile(file);
+      statusEl.textContent = 'Image ready to upload.';
+    } catch (compressErr) {
+      console.error('Background processing error:', compressErr);
+      activeCompressedBlob = null;
+      statusEl.textContent = compressErr.message || 'Could not process photo.';
+    }
   });
 
   body.querySelector('#bgSubmit').addEventListener('click', async function () {
     const statusEl = body.querySelector('#bgStatus');
-    if (!selectedFile) { statusEl.textContent = 'Choose a photo first.'; return; }
+    if (!activeCompressedBlob) { statusEl.textContent = 'Choose a valid photo first.'; return; }
 
-    statusEl.textContent = 'Preparing image…';
     try {
-      const compressed = await compressImageFile(selectedFile);
       statusEl.textContent = 'Uploading…';
-      const url = await uploadImage(compressed, 'quote_background');
+      const url = await uploadImage(activeCompressedBlob, 'quote_background');
       statusEl.textContent = 'Saving to gallery…';
       await apiPost('/admin/quote-background', { image_url: url, category: body.querySelector('#bgCategory').value.trim() || null });
       statusEl.textContent = 'Added to the gallery!';
-      selectedFile = null;
+      activeCompressedBlob = null;
       body.querySelector('#bgUploadInput').value = '';
     } catch (e) {
       statusEl.textContent = 'Could not add background: ' + e.message;
@@ -421,9 +456,52 @@ async function renderHeroesSection(body) {
     });
   });
 
-  let avatarFile = null, coverFile = null;
-  body.querySelector('#heroAvatarInput').addEventListener('change', function (e) { avatarFile = e.target.files[0] || null; });
-  body.querySelector('#heroCoverInput').addEventListener('change', function (e) { coverFile = e.target.files[0] || null; });
+  let activeAvatarBlob = null;
+  let activeCoverBlob = null;
+
+  body.querySelector('#heroAvatarInput').addEventListener('change', async function (e) {
+    const statusEl = body.querySelector('#heroStatus');
+    const file = e.target.files[0];
+    if (!file) {
+      activeAvatarBlob = null;
+      return;
+    }
+
+    const err = validateImageFile(file);
+    if (err) { statusEl.textContent = err; activeAvatarBlob = null; return; }
+
+    try {
+      statusEl.textContent = 'Processing avatar…';
+      activeAvatarBlob = await compressImageFile(file);
+      statusEl.textContent = 'Avatar ready.';
+    } catch (compressErr) {
+      console.error('Avatar processing error:', compressErr);
+      activeAvatarBlob = null;
+      statusEl.textContent = compressErr.message || 'Could not process avatar.';
+    }
+  });
+
+  body.querySelector('#heroCoverInput').addEventListener('change', async function (e) {
+    const statusEl = body.querySelector('#heroStatus');
+    const file = e.target.files[0];
+    if (!file) {
+      activeCoverBlob = null;
+      return;
+    }
+
+    const err = validateImageFile(file);
+    if (err) { statusEl.textContent = err; activeCoverBlob = null; return; }
+
+    try {
+      statusEl.textContent = 'Processing cover photo…';
+      activeCoverBlob = await compressImageFile(file);
+      statusEl.textContent = 'Cover photo ready.';
+    } catch (compressErr) {
+      console.error('Cover processing error:', compressErr);
+      activeCoverBlob = null;
+      statusEl.textContent = compressErr.message || 'Could not process cover photo.';
+    }
+  });
 
   body.querySelector('#heroSubmit').addEventListener('click', async function () {
     const statusEl = body.querySelector('#heroStatus');
@@ -433,13 +511,13 @@ async function renderHeroesSection(body) {
     statusEl.textContent = 'Saving…';
     try {
       let avatarUrl = null, coverUrl = null;
-      if (avatarFile) {
-        statusEl.textContent = 'Preparing avatar…';
-        avatarUrl = await uploadImage(await compressImageFile(avatarFile), 'post');
+      if (activeAvatarBlob) {
+        statusEl.textContent = 'Uploading avatar…';
+        avatarUrl = await uploadImage(activeAvatarBlob, 'post');
       }
-      if (coverFile) {
-        statusEl.textContent = 'Preparing cover photo…';
-        coverUrl = await uploadImage(await compressImageFile(coverFile), 'post');
+      if (activeCoverBlob) {
+        statusEl.textContent = 'Uploading cover photo…';
+        coverUrl = await uploadImage(activeCoverBlob, 'post');
       }
 
       statusEl.textContent = 'Creating profile…';
